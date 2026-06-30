@@ -1,0 +1,20 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Katalog build przeniesiony o poziom wyzej (do <projekt>/build),
+// tam gdzie narzedzie Flutter szuka gotowego APK.
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
