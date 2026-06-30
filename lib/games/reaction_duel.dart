@@ -32,8 +32,13 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
   }
 
   void _tap(int player) {
-    if (_phase == _Phase.gotowi || _phase == _Phase.koniec) {
+    // Start tylko z ekranu poczatkowego. Po koncu - nowa runda wylacznie
+    // przyciskiem restart, zeby nie przeklikac wyniku.
+    if (_phase == _Phase.gotowi) {
       _start();
+      return;
+    }
+    if (_phase == _Phase.koniec) {
       return;
     }
     if (_phase == _Phase.czekaj) {
@@ -69,14 +74,10 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Od nowa',
+            tooltip: 'Nowa runda',
             onPressed: () {
               _timer?.cancel();
-              setState(() {
-                _phase = _Phase.gotowi;
-                _winner = null;
-                _message = '';
-              });
+              _start();
             },
           ),
         ],

@@ -66,15 +66,6 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
     });
   }
 
-  void _reset() {
-    _timer?.cancel();
-    setState(() {
-      _phase = _Phase.gotowi;
-      _score1 = 0;
-      _score2 = 0;
-    });
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
@@ -89,8 +80,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Od nowa',
-            onPressed: _reset,
+            tooltip: 'Nowa runda',
+            onPressed: _startCountdown,
           ),
         ],
       ),
@@ -155,7 +146,10 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
 
     return GestureDetector(
       onTap: () {
-        if (_phase == _Phase.gotowi || _phase == _Phase.koniec) {
+        // Start tylko z ekranu poczatkowego. Po koncu gry nowa runda
+        // wylacznie przyciskiem restart (prawy gorny rog) - zeby nie
+        // przeklikac wyniku dobijajac ekran.
+        if (_phase == _Phase.gotowi) {
           _startCountdown();
         } else {
           _tap(player);
