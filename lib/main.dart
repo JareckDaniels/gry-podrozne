@@ -5,6 +5,7 @@ import 'games/connect_four.dart';
 import 'games/reaction_duel.dart';
 import 'games/tap_battle.dart';
 import 'games/zgadywanka.dart';
+import 'games/simon.dart';
 
 void main() {
   runApp(const GryApp());
@@ -79,6 +80,13 @@ class MenuScreen extends StatelessWidget {
       icon: Icons.abc,
       accent: AppColors.bursztyn,
       builder: () => const ZgadywankaScreen(),
+    ),
+    GameEntry(
+      title: 'Simon',
+      subtitle: '1 gracz · zapamiętaj i powtórz kolory',
+      icon: Icons.gamepad,
+      accent: AppColors.zielen,
+      builder: () => const SimonScreen(),
     ),
   ];
 
