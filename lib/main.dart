@@ -4,6 +4,7 @@ import 'games/tic_tac_toe.dart';
 import 'games/connect_four.dart';
 import 'games/reaction_duel.dart';
 import 'games/tap_battle.dart';
+import 'games/zgadywanka.dart';
 
 void main() {
   runApp(const GryApp());
@@ -15,7 +16,7 @@ class GryApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gry podrozne',
+      title: 'Gry podróżne',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       home: const MenuScreen(),
@@ -45,15 +46,15 @@ class MenuScreen extends StatelessWidget {
 
   static final List<GameEntry> games = [
     GameEntry(
-      title: 'Kolko i krzyzyk',
-      subtitle: '2 graczy · klasyka na 3 w rzedzie',
+      title: 'Kółko i krzyżyk',
+      subtitle: '2 graczy · klasyka na 3 w rzędzie',
       icon: Icons.grid_3x3,
       accent: AppColors.bursztyn,
       builder: () => const TicTacToeScreen(),
     ),
     GameEntry(
-      title: 'Czworki',
-      subtitle: '2 graczy · ulóz 4 w linii',
+      title: 'Czwórki',
+      subtitle: '2 graczy · ułóż 4 w linii',
       icon: Icons.view_column,
       accent: AppColors.koral,
       builder: () => const ConnectFourScreen(),
@@ -67,10 +68,17 @@ class MenuScreen extends StatelessWidget {
     ),
     GameEntry(
       title: 'Bitwa klikania',
-      subtitle: '2 graczy · kto wiecej w 10 sekund',
+      subtitle: '2 graczy · kto więcej w 10 sekund',
       icon: Icons.touch_app,
       accent: AppColors.fiolet,
       builder: () => const TapBattleScreen(),
+    ),
+    GameEntry(
+      title: 'Zgadywanka',
+      subtitle: 'Dla 1 gracza · odgadnij słowo z podpowiedzi',
+      icon: Icons.abc,
+      accent: AppColors.bursztyn,
+      builder: () => const ZgadywankaScreen(),
     ),
   ];
 
@@ -85,7 +93,7 @@ class MenuScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 12),
               const Text(
-                'Gry podrozne',
+                'Gry podróżne',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,

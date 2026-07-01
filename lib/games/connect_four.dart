@@ -103,7 +103,7 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Czworki'),
+        title: const Text('Czwórki'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

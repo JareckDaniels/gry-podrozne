@@ -47,7 +47,7 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
       setState(() {
         _phase = _Phase.koniec;
         _winner = player == 1 ? 2 : 1;
-        _message = 'Falstart! Za wczesnie';
+        _message = 'Falstart! Za wcześnie';
       });
       return;
     }
@@ -108,7 +108,7 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
     switch (_phase) {
       case _Phase.gotowi:
         bg = AppColors.tloJasniejsze;
-        text = 'Dotknij, aby zaczac';
+        text = 'Dotknij, aby zacząć';
         break;
       case _Phase.czekaj:
         bg = AppColors.koral.withOpacity(0.25);

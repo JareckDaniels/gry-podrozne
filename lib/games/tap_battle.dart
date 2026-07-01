@@ -104,7 +104,7 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
     String text;
     switch (_phase) {
       case _Phase.gotowi:
-        text = 'Dotknij dowolnej strony, aby zaczac';
+        text = 'Dotknij dowolnej strony, aby zacząć';
         break;
       case _Phase.odliczanie:
         text = 'Start za $_countdown...';

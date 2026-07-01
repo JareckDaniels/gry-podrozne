@@ -60,7 +60,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kolko i krzyzyk'),
+        title: const Text('Kółko i krzyżyk'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
