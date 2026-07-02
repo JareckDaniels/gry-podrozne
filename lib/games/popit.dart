@@ -110,13 +110,31 @@ class _PopItScreenState extends State<PopItScreen> {
             _pasekStanu(),
             _pasekCzasu(),
             Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: AspectRatio(
-                    aspectRatio: kolumny / wiersze,
-                    child: _plansza(),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Rozmiar planszy ograniczony i szerokoscia, i wysokoscia,
+                    // by nigdy nie wyszla poza ekran.
+                    const odstep = 12.0;
+                    final maxSzer = constraints.maxWidth;
+                    final maxWys = constraints.maxHeight;
+                    // Szerokosc kolka z ograniczenia poziomego i pionowego
+                    final zSzer =
+                        (maxSzer - odstep * (kolumny - 1)) / kolumny;
+                    final zWys =
+                        (maxWys - odstep * (wiersze - 1)) / wiersze;
+                    final bok = min(zSzer, zWys);
+                    final szerPlanszy = bok * kolumny + odstep * (kolumny - 1);
+                    final wysPlanszy = bok * wiersze + odstep * (wiersze - 1);
+                    return Center(
+                      child: SizedBox(
+                        width: szerPlanszy,
+                        height: wysPlanszy,
+                        child: _plansza(),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -224,7 +242,7 @@ class _PopItScreenState extends State<PopItScreen> {
       decoration: BoxDecoration(
         color: wypelnienie,
         shape: BoxShape.circle,
-        border: Border.all(color: obwodka, width: 4),
+        border: Border.all(color: obwodka, width: 3),
         boxShadow: aktywny
             ? [
                 BoxShadow(
