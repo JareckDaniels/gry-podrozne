@@ -110,6 +110,20 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
     setState(() => _poddane = true);
   }
 
+  // Czysci wszystkie wpisane litery i ustawia kursor na pierwszym pustym polu
+  void _wyczyscWpisane() {
+    for (int i = 0; i < _pola.length; i++) {
+      if (!_odsloniete[i]) _pola[i].clear();
+    }
+    setState(() {});
+    for (int i = 0; i < _biezace.slowo.length; i++) {
+      if (!_odsloniete[i]) {
+        _ogniska[i].requestFocus();
+        break;
+      }
+    }
+  }
+
   void _nastepne() {
     setState(() {
       // sprzataj stare kontrolery
@@ -195,90 +209,121 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
 
   Widget _polaLiter() {
     final n = _biezace.slowo.length;
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: List.generate(n, (i) {
-        final odsloniona = _odsloniete[i];
-        final koniec = _zgadniete || _poddane;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Kafelki zawsze w jednej linii: szerokosc dzielona przez liczbe liter.
+        const odstep = 6.0;
+        final dostepna = constraints.maxWidth;
+        double w = (dostepna - odstep * (n - 1)) / n;
+        w = w.clamp(20.0, 46.0); // nie za male, nie za duze
+        final h = w * 1.28;
+        final fontSize = (w * 0.55).clamp(14.0, 26.0);
 
-        if (odsloniona || koniec) {
-          // Litera pokazana (odsloniona od poczatku, albo po zakonczeniu)
-          final poprawna = _biezace.slowo[i];
-          final gracz = _literaGracza(i);
-          // Po poddaniu podswietl na czerwono litery, ktorych gracz nie wpisal
-          final blad = _poddane &&
-              !odsloniona &&
-              _normalizuj(gracz) != _normalizuj(poprawna);
-          return _kafelekLitery(
-            poprawna,
-            tlo: odsloniona
-                ? AppColors.tlo
-                : (_zgadniete
-                    ? AppColors.zielen.withOpacity(0.3)
-                    : (blad
-                        ? AppColors.koral.withOpacity(0.3)
-                        : AppColors.tlo)),
-            kolorTekstu: odsloniona
-                ? AppColors.tekstSzary
-                : AppColors.tekst,
-          );
-        }
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(n, (i) {
+            final odsloniona = _odsloniete[i];
+            final koniec = _zgadniete || _poddane;
+            Widget kafelek;
 
-        // Puste pole do wpisania
-        return SizedBox(
-          width: 44,
-          height: 56,
-          child: TextField(
-            controller: _pola[i],
-            focusNode: _ogniska[i],
-            textAlign: TextAlign.center,
-            maxLength: 1,
-            style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: AppColors.tekst),
-            decoration: InputDecoration(
-              counterText: '',
-              contentPadding: EdgeInsets.zero,
-              filled: true,
-              fillColor: AppColors.tloJasniejsze,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    BorderSide(color: AppColors.bursztyn.withOpacity(0.4)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: AppColors.bursztyn, width: 2),
-              ),
-            ),
-            onChanged: (v) {
-              // Po wpisaniu litery przejdz do nastepnego pustego pola
-              if (v.isNotEmpty) _nastepnePole(i);
-            },
-          ),
+            if (odsloniona || koniec) {
+              final poprawna = _biezace.slowo[i];
+              final gracz = _literaGracza(i);
+              final blad = _poddane &&
+                  !odsloniona &&
+                  _normalizuj(gracz) != _normalizuj(poprawna);
+              kafelek = _kafelekLitery(
+                poprawna,
+                w: w,
+                h: h,
+                fontSize: fontSize,
+                tlo: odsloniona
+                    ? AppColors.tlo
+                    : (_zgadniete
+                        ? AppColors.zielen.withOpacity(0.3)
+                        : (blad
+                            ? AppColors.koral.withOpacity(0.3)
+                            : AppColors.tlo)),
+                kolorTekstu:
+                    odsloniona ? AppColors.tekstSzary : AppColors.tekst,
+              );
+            } else {
+              kafelek = SizedBox(
+                width: w,
+                height: h,
+                child: KeyboardListener(
+                  focusNode: FocusNode(skipTraversal: true),
+                  onKeyEvent: (event) {
+                    // Backspace w pustym polu -> skocz do poprzedniego i wyczysc
+                    if (event.runtimeType.toString() == 'KeyDownEvent' &&
+                        event.logicalKey.keyLabel == 'Backspace' &&
+                        _pola[i].text.isEmpty) {
+                      _poprzedniePole(i);
+                    }
+                  },
+                  child: TextField(
+                    controller: _pola[i],
+                    focusNode: _ogniska[i],
+                    textAlign: TextAlign.center,
+                    maxLength: 1,
+                    style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.tekst),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      contentPadding: EdgeInsets.zero,
+                      filled: true,
+                      fillColor: AppColors.tloJasniejsze,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide(
+                            color: AppColors.bursztyn.withOpacity(0.4)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: const BorderSide(
+                            color: AppColors.bursztyn, width: 2),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      if (v.isNotEmpty) _nastepnePole(i);
+                    },
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(right: i < n - 1 ? odstep : 0),
+              child: kafelek,
+            );
+          }),
         );
-      }),
+      },
     );
   }
 
   Widget _kafelekLitery(String litera,
-      {required Color tlo, required Color kolorTekstu}) {
+      {required Color tlo,
+      required Color kolorTekstu,
+      required double w,
+      required double h,
+      required double fontSize}) {
     return Container(
-      width: 44,
-      height: 56,
+      width: w,
+      height: h,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: tlo,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: Text(
         litera,
         style: TextStyle(
-            fontSize: 26, fontWeight: FontWeight.bold, color: kolorTekstu),
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            color: kolorTekstu),
       ),
     );
   }
@@ -290,8 +335,19 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
         return;
       }
     }
-    // brak kolejnych - schowaj klawiature
     FocusScope.of(context).unfocus();
+  }
+
+  // Backspace w pustym polu -> przejdz do poprzedniego pustego i wyczysc je
+  void _poprzedniePole(int od) {
+    for (int j = od - 1; j >= 0; j--) {
+      if (!_odsloniete[j]) {
+        _pola[j].clear();
+        _ogniska[j].requestFocus();
+        setState(() {});
+        return;
+      }
+    }
   }
 
   Widget _przyciski() {
@@ -328,6 +384,15 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
     }
     return Row(
       children: [
+        // Przycisk kasowania wpisanych liter (ikona)
+        IconButton(
+          onPressed: _wyczyscWpisane,
+          tooltip: 'Wyczyść litery',
+          icon: const Icon(Icons.backspace_outlined),
+          color: AppColors.tekstSzary,
+          iconSize: 26,
+        ),
+        const SizedBox(width: 4),
         Expanded(
           child: OutlinedButton(
             onPressed: _poddajSie,
@@ -336,7 +401,7 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
               side: const BorderSide(color: AppColors.tekstSzary),
             ),
             child: const Text('Poddaję się',
-                style: TextStyle(color: AppColors.tekstSzary, fontSize: 16)),
+                style: TextStyle(color: AppColors.tekstSzary, fontSize: 15)),
           ),
         ),
         const SizedBox(width: 12),

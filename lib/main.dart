@@ -6,6 +6,7 @@ import 'games/reaction_duel.dart';
 import 'games/tap_battle.dart';
 import 'games/zgadywanka.dart';
 import 'games/simon.dart';
+import 'games/popit.dart';
 
 void main() {
   runApp(const GryApp());
@@ -88,6 +89,13 @@ class MenuScreen extends StatelessWidget {
       accent: AppColors.zielen,
       builder: () => const SimonScreen(),
     ),
+    GameEntry(
+      title: 'Szybkie klikanie',
+      subtitle: '1 gracz · klikaj podświetlone kółka na czas',
+      icon: Icons.ads_click,
+      accent: AppColors.koral,
+      builder: () => const PopItScreen(),
+    ),
   ];
 
   @override
@@ -116,10 +124,27 @@ class MenuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Expanded(
-                child: ListView.separated(
-                  itemCount: games.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (_, i) => _GameTile(entry: games[i]),
+                child: ShaderMask(
+                  shaderCallback: (rect) {
+                    return const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black,
+                        Colors.black,
+                        Colors.transparent,
+                      ],
+                      stops: [0.0, 0.03, 0.92, 1.0],
+                    ).createShader(rect);
+                  },
+                  blendMode: BlendMode.dstIn,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.only(top: 4, bottom: 20),
+                    itemCount: games.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (_, i) => _GameTile(entry: games[i]),
+                  ),
                 ),
               ),
             ],
