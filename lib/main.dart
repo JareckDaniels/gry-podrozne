@@ -7,6 +7,7 @@ import 'games/tap_battle.dart';
 import 'games/zgadywanka.dart';
 import 'games/simon.dart';
 import 'games/popit.dart';
+import 'games/biegacz.dart';
 
 void main() {
   runApp(const GryApp());
@@ -95,6 +96,13 @@ class MenuScreen extends StatelessWidget {
       icon: Icons.ads_click,
       accent: AppColors.koral,
       builder: () => const PopItScreen(),
+    ),
+    GameEntry(
+      title: 'Biegacz',
+      subtitle: '1 gracz · skacz i omijaj przeszkody',
+      icon: Icons.directions_run,
+      accent: AppColors.bursztyn,
+      builder: () => const BiegaczScreen(),
     ),
   ];
 
