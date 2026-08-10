@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'dart:math';
 import '../app_theme.dart';
 
@@ -21,7 +22,6 @@ class _BiegaczScreenState extends State<BiegaczScreen>
 
   // Wspolrzedne w "jednostkach gry" (wysokosc pola = 1.0).
   // Postac stoi na ziemi po lewej; y = wysokosc nad ziemia (0 = na ziemi).
-  static const double ziemiaOdDolu = 0.16; // gdzie jest linia ziemi
   static const double postacX = 0.16; // pozioma pozycja postaci (ulamek szer.)
   static const double grawitacja = 3.6; // przyciaganie w dol
   static const double silaSkoku = 1.35; // predkosc poczatkowa skoku
