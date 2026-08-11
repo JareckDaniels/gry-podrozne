@@ -38,6 +38,14 @@ jobs:
           sed -i 's/android:label="[^"]*"/android:label="Gry podrozne"/' \
             android/app/src/main/AndroidManifest.xml
 
+      - name: Wgraj wlasne ikony
+        run: |
+          # flutter create nadpisuje ikony domyslnymi - przywracamy nasze
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp ikony/mipmap-$d/ic_launcher.png \
+              android/app/src/main/res/mipmap-$d/ic_launcher.png
+          done
+
       - name: Pobierz pakiety
         run: flutter pub get
 
