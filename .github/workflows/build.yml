@@ -22,8 +22,21 @@ jobs:
       - name: Ustaw Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
           flutter-version: '3.24.0'
+          cache: true
+
+      - name: Wygeneruj swiezy szkielet Androida
+        run: |
+          # Usuwamy folder android z repo (moze byc niespojny po wczesniejszych
+          # probach) i generujemy go na nowo, dokladnie pod ta wersje Fluttera.
+          # Kod gry (lib/) oraz pubspec.yaml zostaja nietkniete.
+          rm -rf android
+          flutter create --platforms=android --org com.example --project-name gry_podrozne .
+
+      - name: Ustaw nazwe aplikacji
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="Gry podrozne"/' \
+            android/app/src/main/AndroidManifest.xml
 
       - name: Pobierz pakiety
         run: flutter pub get
