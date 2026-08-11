@@ -23,7 +23,7 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   // Wspolrzedne w "jednostkach gry" (wysokosc pola = 1.0).
   // Postac stoi na ziemi po lewej; y = wysokosc nad ziemia (0 = na ziemi).
   static const double postacX = 0.16; // pozioma pozycja postaci (ulamek szer.)
-  static const double grawitacja = 3.6; // przyciaganie w dol
+  static const double grawitacja = 2.4; // przyciaganie w dol (mniejsze = dluzszy skok)
   static const double silaSkoku = 1.35; // predkosc poczatkowa skoku
 
   double _y = 0; // wysokosc postaci nad ziemia
@@ -59,8 +59,8 @@ class _BiegaczScreenState extends State<BiegaczScreen>
       _vy = 0;
       _wPowietrzu = false;
       _przeszkody.clear();
-      _predkosc = 0.42;
-      _doNastepnej = 0.6;
+      _predkosc = 0.34;
+      _doNastepnej = 1.1;
       _wynik = 0;
       _dystans = 0;
     });
@@ -107,18 +107,33 @@ class _BiegaczScreenState extends State<BiegaczScreen>
     // Generowanie kolejnych przeszkod
     _doNastepnej -= _predkosc * dt;
     if (_doNastepnej <= 0) {
-      final wysoka = _rng.nextBool();
-      _przeszkody.add(_Przeszkoda(
-        x: 1.1,
-        wysokosc: wysoka ? 0.14 : 0.09,
-        szerokosc: 0.05 + _rng.nextDouble() * 0.02,
-      ));
-      // Odstep losowy, ale malejacy z predkoscia (trudniej)
-      _doNastepnej = 0.5 + _rng.nextDouble() * 0.5;
+      // Latajace pojawiaja sie dopiero po pewnym wyniku i rzadziej
+      final mozeLatajaca = _wynik > 250;
+      if (mozeLatajaca && _rng.nextDouble() < 0.35) {
+        // Ptak: leci na wysokosci, na ktora wpadniesz skaczac.
+        // Trzeba przebiec pod spodem (nie skakac) albo w luku skoku go minac.
+        _przeszkody.add(_Przeszkoda(
+          x: 1.1,
+          wysokosc: 0,
+          szerokosc: 0.06 + _rng.nextDouble() * 0.02,
+          latajaca: true,
+          yDol: 0.13,
+          yGora: 0.20,
+        ));
+      } else {
+        final wysoka = _rng.nextBool();
+        _przeszkody.add(_Przeszkoda(
+          x: 1.1,
+          wysokosc: wysoka ? 0.11 : 0.07,
+          szerokosc: 0.045 + _rng.nextDouble() * 0.02,
+        ));
+      }
+      // Odstep losowy - wiekszy, by dac czas na reakcje
+      _doNastepnej = 0.75 + _rng.nextDouble() * 0.6;
     }
 
-    // Predkosc rosnie z czasem
-    _predkosc += 0.012 * dt;
+    // Predkosc rosnie z czasem (powoli)
+    _predkosc += 0.008 * dt;
 
     // Wynik = pokonany dystans
     _dystans += _predkosc * dt * 100;
@@ -134,18 +149,26 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   }
 
   bool _kolizja() {
-    // Prostokat postaci (w ulamkach szerokosci/wysokosci pola)
-    // Postac jest kwadratem o boku ~postacBok
     const postacBok = 0.11;
     final px = postacX;
-    final pyDol = _y; // wysokosc dolu postaci nad ziemia
+    final pyDol = _y; // dol postaci nad ziemia
+    final pyGora = _y + postacBok; // gora postaci nad ziemia
 
     for (final p in _przeszkody) {
-      // Przeszkoda: od p.x do p.x+szerokosc, wysokosc od 0 do p.wysokosc
       final naklada = px + postacBok * 0.6 > p.x &&
           px < p.x + p.szerokosc;
-      if (naklada && pyDol < p.wysokosc) {
-        return true;
+      if (!naklada) continue;
+
+      if (p.latajaca) {
+        // Kolizja, gdy postac zachodzi na pas wysokosci ptaka
+        if (pyGora > p.yDol && pyDol < p.yGora) {
+          return true;
+        }
+      } else {
+        // Naziemna: kolizja gdy dol postaci nizej niz szczyt slupka
+        if (pyDol < p.wysokosc) {
+          return true;
+        }
       }
     }
     return false;
@@ -269,10 +292,19 @@ class _BiegaczScreenState extends State<BiegaczScreen>
 
 class _Przeszkoda {
   double x;
-  final double wysokosc;
+  final double wysokosc; // dla naziemnych: wysokosc slupka
   final double szerokosc;
-  _Przeszkoda(
-      {required this.x, required this.wysokosc, required this.szerokosc});
+  final bool latajaca; // true = lecaca w powietrzu (jak ptak)
+  final double yDol; // dla latajacych: dolna krawedz nad ziemia
+  final double yGora; // dla latajacych: gorna krawedz nad ziemia
+  _Przeszkoda({
+    required this.x,
+    required this.wysokosc,
+    required this.szerokosc,
+    this.latajaca = false,
+    this.yDol = 0,
+    this.yGora = 0,
+  });
 }
 
 class _BiegaczPainter extends CustomPainter {
@@ -306,64 +338,169 @@ class _BiegaczPainter extends CustomPainter {
       ..strokeWidth = 2;
     canvas.drawLine(Offset(0, ziemiaY), Offset(w, ziemiaY), farbaZiemia);
 
-    // Przeszkody (geometryczne "kaktusy" - zaokraglone slupki)
-    final farbaPrzesz = Paint()..color = koral;
+    // Przeszkody
     for (final p in przeszkody) {
       final px = p.x * w;
       final szer = p.szerokosc * w;
-      final wys = p.wysokosc * h;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(px, ziemiaY - wys, szer, wys),
-        const Radius.circular(4),
-      );
-      canvas.drawRRect(rect, farbaPrzesz);
-      // maly "kolec" z boku dla charakteru kaktusa
-      final kolec = Paint()..color = koral;
-      final ky = ziemiaY - wys * 0.6;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(px - szer * 0.4, ky, szer * 0.4, wys * 0.28),
-          const Radius.circular(3),
-        ),
-        kolec,
-      );
+      if (p.latajaca) {
+        _rysujPtaka(canvas, px, ziemiaY - ((p.yDol + p.yGora) / 2) * h,
+            szer, (p.yGora - p.yDol) * h);
+      } else {
+        _rysujKaktus(canvas, px, ziemiaY, szer, p.wysokosc * h);
+      }
     }
 
-    // Postac (nasz stworek: zaokraglony korpus + oczko + nozki)
-    final bok = postacBok * h;
-    final cx = postacX * w;
-    final cyDol = ziemiaY - y * h; // dol postaci
-    final cyGora = cyDol - bok;
+    // Postac - dinozaurek
+    _rysujDinozaura(canvas, postacX * w, ziemiaY - y * h, postacBok * h);
+  }
 
-    final farbaPostac = Paint()..color = bursztyn;
-    // korpus
+  void _rysujKaktus(
+      Canvas canvas, double x, double ziemiaY, double szer, double wys) {
+    final farba = Paint()..color = zielen;
+    final grubosc = szer * 0.55;
+    // glowny slup
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx, cyGora, bok * 0.9, bok),
-        Radius.circular(bok * 0.28),
+        Rect.fromLTWH(x + (szer - grubosc) / 2, ziemiaY - wys, grubosc, wys),
+        Radius.circular(grubosc * 0.5),
       ),
-      farbaPostac,
+      farba,
     );
-    // ogon (trojkat z tylu) - lekko "gadzia" sylwetka
-    final ogon = Path()
-      ..moveTo(cx, cyGora + bok * 0.35)
-      ..lineTo(cx - bok * 0.35, cyGora + bok * 0.15)
-      ..lineTo(cx, cyGora + bok * 0.75)
+    // lewe ramie
+    final ramieGr = grubosc * 0.7;
+    final ramieY = ziemiaY - wys * 0.62;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(x - ramieGr * 0.3, ramieY, ramieGr, wys * 0.30),
+        Radius.circular(ramieGr * 0.5),
+      ),
+      farba,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(x - ramieGr * 0.3, ramieY, ramieGr * 0.9, ramieGr),
+        Radius.circular(ramieGr * 0.5),
+      ),
+      farba,
+    );
+    // prawe ramie
+    final praweX = x + szer - ramieGr * 0.7;
+    final ramieY2 = ziemiaY - wys * 0.48;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(praweX, ramieY2, ramieGr, wys * 0.34),
+        Radius.circular(ramieGr * 0.5),
+      ),
+      farba,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(praweX + ramieGr * 0.1, ramieY2, ramieGr * 0.9, ramieGr),
+        Radius.circular(ramieGr * 0.5),
+      ),
+      farba,
+    );
+  }
+
+  void _rysujPtaka(
+      Canvas canvas, double x, double srodekY, double szer, double wys) {
+    final farba = Paint()..color = koral;
+    final cx = x + szer / 2;
+    // korpus (owalny)
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx, srodekY), width: szer * 0.7, height: wys * 0.7),
+      farba,
+    );
+    // skrzydla (dwa trojkaty w gore i w dol - "w locie")
+    final skrzydlo = Path()
+      ..moveTo(cx, srodekY)
+      ..lineTo(cx - szer * 0.5, srodekY - wys * 0.6)
+      ..lineTo(cx - szer * 0.1, srodekY)
       ..close();
-    canvas.drawPath(ogon, farbaPostac);
-    // oczko
-    final oko = Paint()..color = tlo;
+    canvas.drawPath(skrzydlo, farba);
+    final skrzydlo2 = Path()
+      ..moveTo(cx, srodekY)
+      ..lineTo(cx + szer * 0.5, srodekY - wys * 0.6)
+      ..lineTo(cx + szer * 0.1, srodekY)
+      ..close();
+    canvas.drawPath(skrzydlo2, farba);
+    // dziobek
+    final dziob = Path()
+      ..moveTo(cx - szer * 0.35, srodekY)
+      ..lineTo(cx - szer * 0.55, srodekY - wys * 0.05)
+      ..lineTo(cx - szer * 0.35, srodekY + wys * 0.12)
+      ..close();
+    canvas.drawPath(dziob, Paint()..color = bursztyn);
+  }
+
+  void _rysujDinozaura(Canvas canvas, double x, double cyDol, double bok) {
+    final cyGora = cyDol - bok;
+    final farba = Paint()..color = bursztyn;
+
+    // Korpus (zaokraglony, pionowo owalny)
+    final korpus = RRect.fromRectAndRadius(
+      Rect.fromLTWH(x, cyGora + bok * 0.15, bok * 0.72, bok * 0.7),
+      Radius.circular(bok * 0.22),
+    );
+    canvas.drawRRect(korpus, farba);
+
+    // Ogon (trojkat z tylu, u dolu)
+    final ogon = Path()
+      ..moveTo(x + bok * 0.05, cyGora + bok * 0.45)
+      ..lineTo(x - bok * 0.35, cyGora + bok * 0.5)
+      ..lineTo(x + bok * 0.1, cyGora + bok * 0.85)
+      ..close();
+    canvas.drawPath(ogon, farba);
+
+    // Glowa (u gory z przodu)
+    final glowa = RRect.fromRectAndRadius(
+      Rect.fromLTWH(x + bok * 0.42, cyGora, bok * 0.5, bok * 0.42),
+      Radius.circular(bok * 0.16),
+    );
+    canvas.drawRRect(glowa, farba);
+
+    // Pysk (lekko wystajacy)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(x + bok * 0.78, cyGora + bok * 0.14, bok * 0.2, bok * 0.2),
+        Radius.circular(bok * 0.06),
+      ),
+      farba,
+    );
+
+    // Zabki na grzbiecie (male trojkaty)
+    final grzbiet = Paint()..color = bursztyn;
+    for (int i = 0; i < 3; i++) {
+      final gx = x + bok * (0.15 + i * 0.16);
+      final t = Path()
+        ..moveTo(gx, cyGora + bok * 0.16)
+        ..lineTo(gx + bok * 0.08, cyGora - bok * 0.02)
+        ..lineTo(gx + bok * 0.16, cyGora + bok * 0.16)
+        ..close();
+      canvas.drawPath(t, grzbiet);
+    }
+
+    // Oczko
     canvas.drawCircle(
-        Offset(cx + bok * 0.62, cyGora + bok * 0.3), bok * 0.09, oko);
-    // nozki (dwa male prostokaty)
-    canvas.drawRect(
-        Rect.fromLTWH(cx + bok * 0.15, cyDol - bok * 0.06,
-            bok * 0.18, bok * 0.12),
-        farbaPostac);
-    canvas.drawRect(
-        Rect.fromLTWH(cx + bok * 0.55, cyDol - bok * 0.06,
-            bok * 0.18, bok * 0.12),
-        farbaPostac);
+        Offset(x + bok * 0.62, cyGora + bok * 0.16), bok * 0.07,
+        Paint()..color = tlo);
+
+    // Nóżka
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(x + bok * 0.3, cyDol - bok * 0.12, bok * 0.16, bok * 0.16),
+        Radius.circular(bok * 0.04),
+      ),
+      farba,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(x + bok * 0.55, cyDol - bok * 0.12, bok * 0.16, bok * 0.16),
+        Radius.circular(bok * 0.04),
+      ),
+      farba,
+    );
   }
 
   @override
