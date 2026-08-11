@@ -23,8 +23,8 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   // Wspolrzedne w "jednostkach gry" (wysokosc pola = 1.0).
   // Postac stoi na ziemi po lewej; y = wysokosc nad ziemia (0 = na ziemi).
   static const double postacX = 0.16; // pozioma pozycja postaci (ulamek szer.)
-  static const double grawitacja = 3.6; // przyciaganie w dol (mocne, jak pierwotnie)
-  static const double silaSkoku = 1.333; // nizszy skok (~65% poprzedniej wysokosci)
+  static const double grawitacja = 2.7; // -25% (ludzik wolniej spada)
+  static const double silaSkoku = 1.154; // dobrane, by wysokosc skoku zostala
 
   double _y = 0; // wysokosc postaci nad ziemia
   double _vy = 0; // predkosc pionowa
@@ -59,7 +59,7 @@ class _BiegaczScreenState extends State<BiegaczScreen>
       _vy = 0;
       _wPowietrzu = false;
       _przeszkody.clear();
-      _predkosc = 0.34;
+      _predkosc = 0.40;
       _doNastepnej = 1.1;
       _wynik = 0;
       _dystans = 0;
@@ -133,7 +133,7 @@ class _BiegaczScreenState extends State<BiegaczScreen>
     }
 
     // Predkosc rosnie z czasem (powoli)
-    _predkosc += 0.008 * dt;
+    _predkosc += 0.018 * dt;
 
     // Wynik = pokonany dystans
     _dystans += _predkosc * dt * 100;
@@ -407,47 +407,46 @@ class _BiegaczPainter extends CustomPainter {
     final farba = Paint()..color = koral;
     final cx = x + szer / 2;
     final dlugosc = szer * 0.95;
-    final grubosc = wys * 0.5;
+    final grubosc = wys * 0.52;
     final lewy = cx - dlugosc / 2;
     final prawy = cx + dlugosc / 2;
+    final gora = srodekY - grubosc / 2;
 
-    // Korpus (zaokraglony prostokat) - leci w lewo, wiec dziob po lewej
-    final korpus = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-          center: Offset(cx, srodekY), width: dlugosc * 0.7, height: grubosc),
-      Radius.circular(grubosc * 0.35),
+    // Nabój leci w LEWO: czubek (ogiwa) po lewej, luska (prostokat) po prawej.
+    // Czubek zajmuje ~40% dlugosci z przodu, luska reszte.
+    final granicaCzubka = lewy + dlugosc * 0.42;
+
+    // Luska (prostokatny korpus z tylu, lekko zaokraglone rogi po prawej)
+    final luska = RRect.fromRectAndCorners(
+      Rect.fromLTRB(granicaCzubka, gora, prawy, gora + grubosc),
+      topRight: Radius.circular(grubosc * 0.12),
+      bottomRight: Radius.circular(grubosc * 0.12),
     );
-    canvas.drawRRect(korpus, farba);
+    canvas.drawRRect(luska, farba);
 
-    // Dziob (ostry trojkat z przodu, po lewej)
-    final dziob = Path()
-      ..moveTo(lewy, srodekY)
-      ..lineTo(cx - dlugosc * 0.1, srodekY - grubosc / 2)
-      ..lineTo(cx - dlugosc * 0.1, srodekY + grubosc / 2)
+    // Czubek (ogiwa - zaokraglony szpic po lewej)
+    final czubek = Path()
+      ..moveTo(granicaCzubka, gora)
+      ..lineTo(lewy + dlugosc * 0.06, gora + grubosc * 0.14)
+      // luk czubka
+      ..quadraticBezierTo(
+          lewy, srodekY, lewy + dlugosc * 0.06, gora + grubosc * 0.86)
+      ..lineTo(granicaCzubka, gora + grubosc)
       ..close();
-    canvas.drawPath(dziob, farba);
+    canvas.drawPath(czubek, farba);
 
-    // Stateczniki z tylu (po prawej) - dwa trojkaty gora/dol
-    final ogonGora = Path()
-      ..moveTo(prawy - dlugosc * 0.12, srodekY - grubosc * 0.2)
-      ..lineTo(prawy, srodekY - grubosc * 0.75)
-      ..lineTo(prawy - dlugosc * 0.02, srodekY)
-      ..close();
-    canvas.drawPath(ogonGora, farba);
-    final ogonDol = Path()
-      ..moveTo(prawy - dlugosc * 0.12, srodekY + grubosc * 0.2)
-      ..lineTo(prawy, srodekY + grubosc * 0.75)
-      ..lineTo(prawy - dlugosc * 0.02, srodekY)
-      ..close();
-    canvas.drawPath(ogonDol, farba);
-
-    // Plomyk z dyszy (maly, bursztynowy) - sugeruje lot
-    final plomyk = Path()
-      ..moveTo(prawy - dlugosc * 0.02, srodekY - grubosc * 0.18)
-      ..lineTo(prawy + dlugosc * 0.18, srodekY)
-      ..lineTo(prawy - dlugosc * 0.02, srodekY + grubosc * 0.18)
-      ..close();
-    canvas.drawPath(plomyk, Paint()..color = bursztyn);
+    // Linie predkosci za pociskiem (po prawej, bo leci w lewo) - jak na wzorze
+    final kreska = Paint()
+      ..color = koral.withOpacity(0.6)
+      ..strokeWidth = grubosc * 0.12
+      ..strokeCap = StrokeCap.round;
+    final dl = dlugosc * 0.5;
+    canvas.drawLine(Offset(prawy + dlugosc * 0.12, srodekY - grubosc * 0.5),
+        Offset(prawy + dlugosc * 0.12 + dl, srodekY - grubosc * 0.5), kreska);
+    canvas.drawLine(Offset(prawy + dlugosc * 0.18, srodekY),
+        Offset(prawy + dlugosc * 0.18 + dl * 0.8, srodekY), kreska);
+    canvas.drawLine(Offset(prawy + dlugosc * 0.12, srodekY + grubosc * 0.5),
+        Offset(prawy + dlugosc * 0.12 + dl, srodekY + grubosc * 0.5), kreska);
   }
 
   void _rysujLudzika(Canvas canvas, double x, double cyDol, double bok) {
