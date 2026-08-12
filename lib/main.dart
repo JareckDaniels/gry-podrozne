@@ -8,6 +8,7 @@ import 'games/zgadywanka.dart';
 import 'games/simon.dart';
 import 'games/popit.dart';
 import 'games/biegacz.dart';
+import 'games/balon.dart';
 
 void main() {
   runApp(const GryApp());
@@ -103,6 +104,13 @@ class MenuScreen extends StatelessWidget {
       icon: Icons.directions_run,
       accent: AppColors.bursztyn,
       builder: () => const BiegaczScreen(),
+    ),
+    GameEntry(
+      title: 'Balon',
+      subtitle: '1 gracz · leć w górę i zbieraj kółka',
+      icon: Icons.paragliding,
+      accent: AppColors.zielen,
+      builder: () => const BalonScreen(),
     ),
   ];
 
