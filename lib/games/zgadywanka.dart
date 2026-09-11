@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../app_theme.dart';
 import 'slowa_baza.dart';
+import '../rekordy.dart';
 
 class ZgadywankaScreen extends StatefulWidget {
   const ZgadywankaScreen({super.key});
@@ -21,6 +22,7 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
   late List<FocusNode> _ogniska;
   bool _poddane = false;
   bool _zgadniete = false;
+  int _seria = 0; // ile slow z rzedu odgadnietych bez poddania sie
 
   @override
   void initState() {
@@ -94,7 +96,10 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
       zbudowane.write(_literaGracza(i));
     }
     if (_normalizuj(zbudowane.toString()) == _normalizuj(_biezace.slowo)) {
-      setState(() => _zgadniete = true);
+      setState(() {
+        _zgadniete = true;
+        _seria++;
+      });
     } else {
       // Pokaz krotki komunikat i podswietl bledy
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,6 +113,8 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
 
   void _poddajSie() {
     setState(() => _poddane = true);
+    Rekordy.zglos(context, Gry.zgadywanka, _seria);
+    _seria = 0;
   }
 
   // Czysci wszystkie wpisane litery i ustawia kursor na pierwszym pustym polu
@@ -148,6 +155,17 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Zgadywanka'),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Text('Seria: $_seria',
+                  style: const TextStyle(
+                      fontSize: 14, color: AppColors.tekstSzary)),
+            ),
+          ),
+          const RekordyPrzycisk(gra: Gry.zgadywanka),
+        ],
       ),
       body: SafeArea(
         child: Padding(

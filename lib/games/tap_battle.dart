@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class TapBattleScreen extends StatefulWidget {
   const TapBattleScreen({super.key});
@@ -51,6 +52,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
       if (_timeLeft <= 0) {
         t.cancel();
         setState(() => _phase = _Phase.koniec);
+        final najlepszy = _score1 > _score2 ? _score1 : _score2;
+        Rekordy.zglos(context, Gry.bitwa, najlepszy);
       }
     });
   }
@@ -78,6 +81,7 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
       appBar: AppBar(
         title: const Text('Bitwa klikania'),
         actions: [
+          const RekordyPrzycisk(gra: Gry.bitwa),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa runda',

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'dart:math';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class BalonScreen extends StatefulWidget {
   const BalonScreen({super.key});
@@ -20,34 +22,51 @@ class _BalonScreenState extends State<BalonScreen>
 
   _Faza _faza = _Faza.start;
 
-  // Wszystko w ulamkach rozmiaru pola (szerokosc/wysokosc = 1.0).
-  // Balon trzyma stala wysokosc na ekranie (60% od gory), swiat plynie w dol.
-  static const double balonY = 0.62; // pozycja balonu w pionie (staly)
-  static const double balonPromien = 0.075; // rozmiar balonu (ulamek szer.)
+  // UKLAD WSPOLRZEDNYCH
+  // Polozenie w poziomie (x) = ulamek SZEROKOSCI pola.
+  // Polozenie w pionie (y) i WSZYSTKIE ROZMIARY = ulamek WYSOKOSCI pola.
+  //   Dzieki temu balon, kulki i platformy nie rozciagaja sie na boki
+  //   po obroceniu telefonu - maja te same proporcje co w pionie.
+  static const double balonY = 0.62; // stala wysokosc balonu na ekranie
+  static const double balonPromien = 0.039; // promien (ulamek wysokosci)
+  static const double kulkaPromien = 0.012;
+  static const double platformaGrubosc = 0.02;
 
-  double _balonX = 0.5; // pozycja pozioma (0..1), sterowana palcem
+  double _balonX = 0.5; // pozycja pozioma (0..1 szerokosci)
 
-  // Przeszkody: KROTKIE poziome platformy rozrzucone w polu (jak w oryginale).
-  // Balon je omija, lecac w otwartej przestrzeni.
   final List<_Platforma> _platformy = [];
-  // Kolka do zebrania, rozsypane po polu
   final List<_Kulka> _kulki = [];
 
-  double _predkosc = 0.30; // predkosc plyniecia swiata w dol (ulamek wys./s)
-  double _doNastepnej = 0; // odliczanie do kolejnej fali przeszkod
+  double _predkosc = 0.30; // ulamek wysokosci na sekunde
+  double _doNastepnej = 0;
 
   int _wynik = 0;
   int _rekord = 0;
+
+  double _szerPola = 1;
+  double _wysPola = 1;
+
+  // 1 jednostka rozmiaru (wysokosc pola) wyrazona w ulamku szerokosci
+  double get _naSzerokosc => _wysPola / _szerPola;
+  // Szerokosc pola wyrazona w jednostkach rozmiaru
+  double get _szerWJednostkach => _szerPola / _wysPola;
 
   @override
   void initState() {
     super.initState();
     _ticker = createTicker(_tik);
+    // Ta gra MOZE sie obracac.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -75,7 +94,6 @@ class _BalonScreenState extends State<BalonScreen>
     _ostatni = czas;
     if (_faza != _Faza.gra) return;
 
-    // Swiat plynie w dol: wszystko przesuwamy w dol, balon stoi w miejscu.
     for (final p in _platformy) {
       p.y += _predkosc * dt;
     }
@@ -85,48 +103,27 @@ class _BalonScreenState extends State<BalonScreen>
     _platformy.removeWhere((p) => p.y > 1.2);
     _kulki.removeWhere((k) => k.y > 1.2 || k.zebrana);
 
-    // Generowanie nowych przeszkod (u gory, wplywaja z gory).
-    // Za kazdym razem 1-2 krotkie platformy w losowych miejscach + kulki.
     _doNastepnej -= _predkosc * dt;
     if (_doNastepnej <= 0) {
-      final ile = 1 + _rng.nextInt(2); // 1 lub 2 platformy naraz
-      for (int i = 0; i < ile; i++) {
-        final szer = 0.16 + _rng.nextDouble() * 0.14; // krotka platforma
-        final x = _rng.nextDouble() * (1 - szer);
-        _platformy.add(_Platforma(
-          x: x,
-          szer: szer,
-          y: -0.03 - 0.10 * i,
-        ));
-      }
-      // Kilka kulek rozsypanych w tej strefie (w otwartej przestrzeni)
-      final ileKulek = 2 + _rng.nextInt(3);
-      for (int i = 0; i < ileKulek; i++) {
-        _kulki.add(_Kulka(
-          x: 0.1 + _rng.nextDouble() * 0.8,
-          y: -0.05 - 0.12 * _rng.nextDouble(),
-        ));
-      }
-      // Odstep do nastepnej fali
+      _nowaFala();
       _doNastepnej = 0.32 + _rng.nextDouble() * 0.16;
     }
 
-    // Predkosc rosnie z czasem
     _predkosc += 0.010 * dt;
 
-    // Zbieranie kulek
+    // Zbieranie kulek - odleglosc liczona w jednostkach rozmiaru,
+    // wiec x trzeba przeliczyc ze szerokosci na te jednostki.
     for (final k in _kulki) {
       if (k.zebrana) continue;
-      final dx = (k.x - _balonX).abs();
+      final dx = (k.x - _balonX).abs() / _naSzerokosc;
       final dy = (k.y - balonY).abs();
-      // odleglosc w przyblizeniu (x w ulamkach szer, y w ulamkach wys - ok dla gry)
-      if (dx < balonPromien + 0.03 && dy < balonPromien + 0.03) {
+      if (dx < balonPromien + kulkaPromien + 0.012 &&
+          dy < balonPromien + kulkaPromien + 0.012) {
         k.zebrana = true;
         _wynik += 1;
       }
     }
 
-    // Kolizja z platforma = koniec
     if (_kolizja()) {
       _koniec();
       return;
@@ -135,18 +132,44 @@ class _BalonScreenState extends State<BalonScreen>
     setState(() {});
   }
 
+  // Nowa fala przeszkod. Im szersze pole (telefon w poziomie),
+  // tym wiecej platform i kulek - zeby gestosc byla taka sama jak w pionie.
+  void _nowaFala() {
+    final szer = _szerWJednostkach;
+
+    final ilePlatform =
+        max(1, (szer * (2.2 + _rng.nextDouble() * 1.5)).round());
+    for (int i = 0; i < ilePlatform; i++) {
+      final szerPlat = 0.085 + _rng.nextDouble() * 0.070; // w jednostkach
+      final double szerPlatUlamek =
+          (szerPlat * _naSzerokosc).clamp(0.05, 0.9).toDouble();
+      _platformy.add(_Platforma(
+        x: _rng.nextDouble() * (1 - szerPlatUlamek),
+        szer: szerPlat,
+        y: -0.03 - _rng.nextDouble() * 0.12,
+      ));
+    }
+
+    final int ileKulek = (szer * 5.8).round().clamp(2, 14).toInt();
+    for (int i = 0; i < ileKulek; i++) {
+      _kulki.add(_Kulka(
+        x: 0.06 + _rng.nextDouble() * 0.88,
+        y: -0.05 - 0.12 * _rng.nextDouble(),
+      ));
+    }
+  }
+
   bool _kolizja() {
-    // Balon: srodek (_balonX, balonY), promien balonPromien.
-    // Platforma: krotka belka od p.x do p.x+p.szer, na wysokosci p.y.
-    const grubosc = 0.02; // grubosc platformy (ulamek wys.)
     for (final p in _platformy) {
-      // Nakladanie w pionie
-      final wPionie = (p.y - balonY).abs() < balonPromien + grubosc;
-      // Nakladanie w poziomie (balon vs zakres platformy)
-      final balonLewy = _balonX - balonPromien * 0.7;
-      final balonPrawy = _balonX + balonPromien * 0.7;
-      final wPoziomie = balonPrawy > p.x && balonLewy < p.x + p.szer;
-      if (wPionie && wPoziomie) return true;
+      final wPionie =
+          (p.y - balonY).abs() < balonPromien + platformaGrubosc / 2;
+      if (!wPionie) continue;
+      // Zakres platformy w ulamkach szerokosci
+      final platLewy = p.x;
+      final platPrawy = p.x + p.szer * _naSzerokosc;
+      final balonLewy = _balonX - balonPromien * 0.7 * _naSzerokosc;
+      final balonPrawy = _balonX + balonPromien * 0.7 * _naSzerokosc;
+      if (balonPrawy > platLewy && balonLewy < platPrawy) return true;
     }
     return false;
   }
@@ -157,22 +180,29 @@ class _BalonScreenState extends State<BalonScreen>
       _faza = _Faza.koniec;
       if (_wynik > _rekord) _rekord = _wynik;
     });
+    Rekordy.zglos(context, Gry.balon, _wynik);
   }
 
   void _przesun(double dx, double szerPola) {
     if (_faza != _Faza.gra) return;
     setState(() {
       _balonX += dx / szerPola;
-      _balonX = _balonX.clamp(balonPromien, 1 - balonPromien);
+      final double margines =
+          (balonPromien * _naSzerokosc).clamp(0.0, 0.45).toDouble();
+      _balonX = _balonX.clamp(margines, 1 - margines).toDouble();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final poziomo =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Balon'),
+        toolbarHeight: poziomo ? 40 : null,
         actions: [
+          const RekordyPrzycisk(gra: Gry.balon),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa gra',
@@ -182,6 +212,8 @@ class _BalonScreenState extends State<BalonScreen>
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
+          _szerPola = constraints.maxWidth;
+          _wysPola = constraints.maxHeight;
           final szer = constraints.maxWidth;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -206,20 +238,19 @@ class _BalonScreenState extends State<BalonScreen>
                     ),
                   ),
                 ),
-                // Wynik
                 Positioned(
                   top: 12,
                   right: 16,
                   child: Text(
                     'Rekord $_rekord   Punkty $_wynik',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.tekstSzary,
                     ),
                   ),
                 ),
-                if (_faza != _Faza.gra) _nakladka(),
+                if (_faza != _Faza.gra) _nakladka(poziomo),
               ],
             ),
           );
@@ -228,12 +259,12 @@ class _BalonScreenState extends State<BalonScreen>
     );
   }
 
-  Widget _nakladka() {
+  Widget _nakladka(bool poziomo) {
     final koniec = _faza == _Faza.koniec;
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(28),
-        margin: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(poziomo ? 18 : 28),
+        margin: EdgeInsets.all(poziomo ? 16 : 32),
         decoration: BoxDecoration(
           color: AppColors.tloJasniejsze.withOpacity(0.95),
           borderRadius: BorderRadius.circular(20),
@@ -243,8 +274,8 @@ class _BalonScreenState extends State<BalonScreen>
           children: [
             Text(
               koniec ? 'Koniec gry' : 'Balon',
-              style: const TextStyle(
-                  fontSize: 26,
+              style: TextStyle(
+                  fontSize: poziomo ? 21 : 26,
                   fontWeight: FontWeight.bold,
                   color: AppColors.tekst),
             ),
@@ -258,14 +289,14 @@ class _BalonScreenState extends State<BalonScreen>
               style: const TextStyle(
                   fontSize: 15, color: AppColors.tekstSzary, height: 1.4),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: poziomo ? 12 : 18),
             ElevatedButton(
               onPressed: _nowaGra,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.zielen,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 14),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 32, vertical: poziomo ? 10 : 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -283,9 +314,9 @@ class _BalonScreenState extends State<BalonScreen>
 }
 
 class _Platforma {
-  double y;
-  final double x;
-  final double szer;
+  double y; // ulamek wysokosci
+  final double x; // ulamek szerokosci (lewa krawedz)
+  final double szer; // ulamek WYSOKOSCI (nie szerokosci!)
   _Platforma({required this.y, required this.x, required this.szer});
 }
 
@@ -315,22 +346,22 @@ class _BalonPainter extends CustomPainter {
   });
 
   static const double balonY = 0.62;
-  static const double balonPromien = 0.075;
+  static const double balonPromien = 0.039;
+  static const double kulkaPromien = 0.012;
+  static const double platformaGrubosc = 0.02;
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // Platformy (krotkie belki z zabkami u dolu - jak w oryginale)
-    const grubosc = 0.02;
+    // Platformy - polozenie w poziomie od szerokosci, rozmiar od wysokosci
     final farbaPlat = Paint()..color = koral;
     for (final p in platformy) {
       final py = p.y * h;
-      final gr = grubosc * h;
+      final gr = platformaGrubosc * h;
       final px = p.x * w;
-      final szerP = p.szer * w;
-      // glowna belka
+      final szerP = p.szer * h;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(px, py - gr / 2, szerP, gr),
@@ -338,7 +369,6 @@ class _BalonPainter extends CustomPainter {
         ),
         farbaPlat,
       );
-      // zabki pod belka (male trojkaty w dol)
       final ileZabkow = (szerP / (gr * 1.4)).floor().clamp(2, 20);
       final szerZabka = szerP / ileZabkow;
       for (int i = 0; i < ileZabkow; i++) {
@@ -352,7 +382,7 @@ class _BalonPainter extends CustomPainter {
       }
     }
 
-    // Kulki (punkty)
+    // Kulki
     final farbaKulka = Paint()..color = bursztyn;
     final obwodka = Paint()
       ..color = bursztyn
@@ -362,43 +392,35 @@ class _BalonPainter extends CustomPainter {
       if (k.zebrana) continue;
       final kx = k.x * w;
       final ky = k.y * h;
-      final r = 0.022 * w;
+      final r = kulkaPromien * h;
       canvas.drawCircle(Offset(kx, ky), r, farbaKulka);
       canvas.drawCircle(Offset(kx, ky), r + 3, obwodka);
     }
 
     // Balon
-    _rysujBalon(canvas, balonX * w, balonY * h, balonPromien * w);
+    _rysujBalon(canvas, balonX * w, balonY * h, balonPromien * h);
   }
 
   void _rysujBalon(Canvas canvas, double cx, double cy, double r) {
-    // Czasza balonu (okrag lekko splaszczony u dolu)
     final farba = Paint()..color = zielen;
     final czasza = Rect.fromCenter(
         center: Offset(cx, cy - r * 0.2), width: r * 2, height: r * 2.1);
     canvas.drawArc(czasza, 0, 3.14159 * 2, true, farba);
 
-    // Pasy na balonie (dla charakteru) - jasniejszy odcien
     final pas = Paint()..color = fiolet.withOpacity(0.7);
     final pasPath = Path()
       ..moveTo(cx, cy - r * 1.25)
-      ..quadraticBezierTo(
-          cx - r * 0.5, cy - r * 0.2, cx, cy + r * 0.85)
-      ..quadraticBezierTo(
-          cx + r * 0.5, cy - r * 0.2, cx, cy - r * 1.25)
+      ..quadraticBezierTo(cx - r * 0.5, cy - r * 0.2, cx, cy + r * 0.85)
+      ..quadraticBezierTo(cx + r * 0.5, cy - r * 0.2, cx, cy - r * 1.25)
       ..close();
     canvas.drawPath(pasPath, pas);
 
-    // Kosz (maly prostokat pod balonem)
     final kosz = Paint()..color = bursztyn;
     final koszRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
-          center: Offset(cx, cy + r * 1.15),
-          width: r * 0.7,
-          height: r * 0.5),
+          center: Offset(cx, cy + r * 1.15), width: r * 0.7, height: r * 0.5),
       Radius.circular(r * 0.1),
     );
-    // Linki od balonu do kosza
     final linka = Paint()
       ..color = tekstSzary
       ..strokeWidth = 1.5;

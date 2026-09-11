@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_theme.dart';
 import 'games/tic_tac_toe.dart';
 import 'games/connect_four.dart';
@@ -11,6 +12,12 @@ import 'games/biegacz.dart';
 import 'games/balon.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Domyslnie CALA aplikacja chodzi tylko w pionie - menu i gry planszowe
+  // rozjezdzaly sie po obroceniu telefonu.
+  // Wyjatek robia Biegacz i Balon: te dwa ekrany same odblokowuja obrot
+  // przy wejsciu i przywracaja pion przy wyjsciu (patrz biegacz.dart / balon.dart).
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const GryApp());
 }
 

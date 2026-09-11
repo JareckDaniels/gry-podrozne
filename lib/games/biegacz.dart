@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'dart:math';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class BiegaczScreen extends StatefulWidget {
   const BiegaczScreen({super.key});
@@ -20,21 +22,33 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   _Faza _faza = _Faza.start;
   final _rng = Random();
 
-  // Wspolrzedne w "jednostkach gry" (wysokosc pola = 1.0).
-  // Postac stoi na ziemi po lewej; y = wysokosc nad ziemia (0 = na ziemi).
-  static const double postacX = 0.16; // pozioma pozycja postaci (ulamek szer.)
-  static const double grawitacja = 2.7; // -25% (ludzik wolniej spada)
-  static const double silaSkoku = 1.154; // dobrane, by wysokosc skoku zostala
+  // UKLAD WSPOLRZEDNYCH
+  // Pozycje w poziomie (x, predkosc) = ulamki SZEROKOSCI pola.
+  //   Dzieki temu odstepy miedzy przeszkodami w CZASIE sa takie same
+  //   niezaleznie od tego, czy telefon stoi w pionie czy w poziomie.
+  // Wszystkie ROZMIARY (postac, przeszkody, ziemia) = ulamki WYSOKOSCI pola.
+  //   Dzieki temu nic sie nie rozciaga na boki po obroceniu ekranu -
+  //   cala scena zachowuje te same proporcje, tylko jest nizsza.
+  static const double postacX = 0.16; // srodek postaci (ulamek szerokosci)
+  static const double postacBok = 0.11; // wysokosc postaci (ulamek wysokosci)
+  static const double grawitacja = 2.7;
+  static const double silaSkoku = 1.154;
+
+  // Rozmiar pola gry - potrzebny, by przeliczac rozmiary (wysokosc)
+  // na polozenia (szerokosc). Ustawiany z LayoutBuilder przy kazdym budowaniu.
+  double _szerPola = 1;
+  double _wysPola = 1;
+
+  // 1 jednostka rozmiaru (czyli 1 x wysokosc pola) wyrazona w ulamku szerokosci
+  double get _naSzerokosc => _wysPola / _szerPola;
 
   double _y = 0; // wysokosc postaci nad ziemia
   double _vy = 0; // predkosc pionowa
   bool _wPowietrzu = false;
 
-  // Przeszkody: lista pozycji X (ulamek szerokosci, od prawej w lewo)
-  // oraz ich wysokosc i typ (0 = niska, 1 = wysoka)
   final List<_Przeszkoda> _przeszkody = [];
-  double _predkosc = 0.42; // predkosc przesuwania (ulamek szer. na sekunde)
-  double _doNastepnej = 0; // odliczanie do kolejnej przeszkody
+  double _predkosc = 0.42; // ulamek szerokosci na sekunde
+  double _doNastepnej = 0;
 
   int _wynik = 0;
   int _rekord = 0;
@@ -44,11 +58,19 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   void initState() {
     super.initState();
     _ticker = createTicker(_tik);
+    // Ta gra MOZE sie obracac - odblokowujemy wszystkie polozenia.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    // Wychodzac wracamy do pionu, zeby reszta aplikacji byla zablokowana.
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -102,20 +124,18 @@ class _BiegaczScreenState extends State<BiegaczScreen>
     for (final p in _przeszkody) {
       p.x -= _predkosc * dt;
     }
-    _przeszkody.removeWhere((p) => p.x < -0.15);
+    _przeszkody.removeWhere((p) => p.x < -0.3);
 
     // Generowanie kolejnych przeszkod
     _doNastepnej -= _predkosc * dt;
     if (_doNastepnej <= 0) {
-      // Latajace pojawiaja sie dopiero po pewnym wyniku i rzadziej
       final mozeLatajaca = _wynik > 250;
       if (mozeLatajaca && _rng.nextDouble() < 0.35) {
-        // Ptak: leci na wysokosci, na ktora wpadniesz skaczac.
-        // Trzeba przebiec pod spodem (nie skakac) albo w luku skoku go minac.
+        // Pocisk leci na wysokosci, na ktora wpadniesz skaczac.
         _przeszkody.add(_Przeszkoda(
           x: 1.1,
           wysokosc: 0,
-          szerokosc: 0.06 + _rng.nextDouble() * 0.02,
+          szerokosc: 0.031 + _rng.nextDouble() * 0.011,
           latajaca: true,
           yDol: 0.13,
           yGora: 0.20,
@@ -125,21 +145,17 @@ class _BiegaczScreenState extends State<BiegaczScreen>
         _przeszkody.add(_Przeszkoda(
           x: 1.1,
           wysokosc: wysoka ? 0.11 : 0.07,
-          szerokosc: 0.045 + _rng.nextDouble() * 0.02,
+          szerokosc: 0.023 + _rng.nextDouble() * 0.010,
         ));
       }
-      // Odstep losowy - wiekszy, by dac czas na reakcje
       _doNastepnej = 0.75 + _rng.nextDouble() * 0.6;
     }
 
-    // Predkosc rosnie z czasem (powoli)
     _predkosc += 0.018 * dt;
 
-    // Wynik = pokonany dystans
     _dystans += _predkosc * dt * 100;
     _wynik = _dystans.floor();
 
-    // Kolizje
     if (_kolizja()) {
       _koniec();
       return;
@@ -149,26 +165,25 @@ class _BiegaczScreenState extends State<BiegaczScreen>
   }
 
   bool _kolizja() {
-    const postacBok = 0.11;
-    final px = postacX;
+    // Postac: srodek w postacX, szerokosc liczona od jej wysokosci,
+    // przeliczona na ulamek szerokosci pola.
+    final polSzerPostaci = postacBok * 0.24 * _naSzerokosc;
+    final pLewy = postacX - polSzerPostaci;
+    final pPrawy = postacX + polSzerPostaci;
+
     final pyDol = _y; // dol postaci nad ziemia
     final pyGora = _y + postacBok; // gora postaci nad ziemia
 
     for (final p in _przeszkody) {
-      final naklada = px + postacBok * 0.6 > p.x &&
-          px < p.x + p.szerokosc;
+      final przLewy = p.x;
+      final przPrawy = p.x + p.szerokosc * _naSzerokosc;
+      final naklada = pPrawy > przLewy && pLewy < przPrawy;
       if (!naklada) continue;
 
       if (p.latajaca) {
-        // Kolizja, gdy postac zachodzi na pas wysokosci ptaka
-        if (pyGora > p.yDol && pyDol < p.yGora) {
-          return true;
-        }
+        if (pyGora > p.yDol && pyDol < p.yGora) return true;
       } else {
-        // Naziemna: kolizja gdy dol postaci nizej niz szczyt slupka
-        if (pyDol < p.wysokosc) {
-          return true;
-        }
+        if (pyDol < p.wysokosc) return true;
       }
     }
     return false;
@@ -180,14 +195,20 @@ class _BiegaczScreenState extends State<BiegaczScreen>
       _faza = _Faza.koniec;
       if (_wynik > _rekord) _rekord = _wynik;
     });
+    Rekordy.zglos(context, Gry.biegacz, _wynik);
   }
 
   @override
   Widget build(BuildContext context) {
+    final poziomo =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Biegacz'),
+        // W poziomie wysokosc jest na wage zlota - chudszy pasek.
+        toolbarHeight: poziomo ? 40 : null,
         actions: [
+          const RekordyPrzycisk(gra: Gry.biegacz),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa gra',
@@ -195,54 +216,59 @@ class _BiegaczScreenState extends State<BiegaczScreen>
           ),
         ],
       ),
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _skok(),
-        child: Stack(
-          children: [
-            // Pole gry
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _BiegaczPainter(
-                  y: _y,
-                  przeszkody: _przeszkody,
-                  bursztyn: AppColors.bursztyn,
-                  koral: AppColors.koral,
-                  zielen: AppColors.zielen,
-                  tlo: AppColors.tlo,
-                  tekstSzary: AppColors.tekstSzary,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Zapamietujemy rozmiar pola, by fizyka wiedziala,
+          // jak przeliczac wysokosc na szerokosc.
+          _szerPola = constraints.maxWidth;
+          _wysPola = constraints.maxHeight;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => _skok(),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _BiegaczPainter(
+                      y: _y,
+                      przeszkody: _przeszkody,
+                      bursztyn: AppColors.bursztyn,
+                      koral: AppColors.koral,
+                      zielen: AppColors.zielen,
+                      tlo: AppColors.tlo,
+                      tekstSzary: AppColors.tekstSzary,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // Wynik u gory
-            Positioned(
-              top: 12,
-              right: 16,
-              child: Text(
-                'HI ${_rekord.toString().padLeft(5, '0')}   '
-                '${_wynik.toString().padLeft(5, '0')}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.tekstSzary,
-                  letterSpacing: 1,
+                Positioned(
+                  top: 12,
+                  right: 16,
+                  child: Text(
+                    'HI ${_rekord.toString().padLeft(5, '0')}   '
+                    '${_wynik.toString().padLeft(5, '0')}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.tekstSzary,
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ),
-              ),
+                if (_faza != _Faza.gra) _nakladka(poziomo),
+              ],
             ),
-            // Nakladki start / koniec
-            if (_faza != _Faza.gra) _nakladka(),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _nakladka() {
+  Widget _nakladka(bool poziomo) {
     final koniec = _faza == _Faza.koniec;
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(28),
-        margin: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(poziomo ? 18 : 28),
+        margin: EdgeInsets.all(poziomo ? 16 : 32),
         decoration: BoxDecoration(
           color: AppColors.tloJasniejsze.withOpacity(0.95),
           borderRadius: BorderRadius.circular(20),
@@ -252,8 +278,8 @@ class _BiegaczScreenState extends State<BiegaczScreen>
           children: [
             Text(
               koniec ? 'Koniec gry' : 'Biegacz',
-              style: const TextStyle(
-                  fontSize: 26,
+              style: TextStyle(
+                  fontSize: poziomo ? 21 : 26,
                   fontWeight: FontWeight.bold,
                   color: AppColors.tekst),
             ),
@@ -266,14 +292,14 @@ class _BiegaczScreenState extends State<BiegaczScreen>
               style: const TextStyle(
                   fontSize: 15, color: AppColors.tekstSzary, height: 1.4),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: poziomo ? 12 : 18),
             ElevatedButton(
               onPressed: _nowaGra,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.zielen,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 14),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 32, vertical: poziomo ? 10 : 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -291,12 +317,12 @@ class _BiegaczScreenState extends State<BiegaczScreen>
 }
 
 class _Przeszkoda {
-  double x;
-  final double wysokosc; // dla naziemnych: wysokosc slupka
-  final double szerokosc;
-  final bool latajaca; // true = lecaca w powietrzu (jak ptak)
-  final double yDol; // dla latajacych: dolna krawedz nad ziemia
-  final double yGora; // dla latajacych: gorna krawedz nad ziemia
+  double x; // ulamek szerokosci pola
+  final double wysokosc; // ulamek wysokosci pola
+  final double szerokosc; // ulamek WYSOKOSCI pola (nie szerokosci!)
+  final bool latajaca;
+  final double yDol;
+  final double yGora;
   _Przeszkoda({
     required this.x,
     required this.wysokosc,
@@ -338,10 +364,10 @@ class _BiegaczPainter extends CustomPainter {
       ..strokeWidth = 2;
     canvas.drawLine(Offset(0, ziemiaY), Offset(w, ziemiaY), farbaZiemia);
 
-    // Przeszkody
+    // Przeszkody - pozycja w poziomie od szerokosci, rozmiar od wysokosci
     for (final p in przeszkody) {
       final px = p.x * w;
-      final szer = p.szerokosc * w;
+      final szer = p.szerokosc * h;
       if (p.latajaca) {
         _rysujPocisk(canvas, px, ziemiaY - ((p.yDol + p.yGora) / 2) * h,
             szer, (p.yGora - p.yDol) * h);
@@ -350,7 +376,7 @@ class _BiegaczPainter extends CustomPainter {
       }
     }
 
-    // Postac - ludzik
+    // Postac - ludzik (x = srodek)
     _rysujLudzika(canvas, postacX * w, ziemiaY - y * h, postacBok * h);
   }
 
@@ -358,7 +384,6 @@ class _BiegaczPainter extends CustomPainter {
       Canvas canvas, double x, double ziemiaY, double szer, double wys) {
     final farba = Paint()..color = zielen;
     final grubosc = szer * 0.55;
-    // glowny slup
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(x + (szer - grubosc) / 2, ziemiaY - wys, grubosc, wys),
@@ -366,7 +391,6 @@ class _BiegaczPainter extends CustomPainter {
       ),
       farba,
     );
-    // lewe ramie
     final ramieGr = grubosc * 0.7;
     final ramieY = ziemiaY - wys * 0.62;
     canvas.drawRRect(
@@ -383,7 +407,6 @@ class _BiegaczPainter extends CustomPainter {
       ),
       farba,
     );
-    // prawe ramie
     final praweX = x + szer - ramieGr * 0.7;
     final ramieY2 = ziemiaY - wys * 0.48;
     canvas.drawRRect(
@@ -412,11 +435,8 @@ class _BiegaczPainter extends CustomPainter {
     final prawy = cx + dlugosc / 2;
     final gora = srodekY - grubosc / 2;
 
-    // Nabój leci w LEWO: czubek (ogiwa) po lewej, luska (prostokat) po prawej.
-    // Czubek zajmuje ~40% dlugosci z przodu, luska reszte.
     final granicaCzubka = lewy + dlugosc * 0.42;
 
-    // Luska (prostokatny korpus z tylu, lekko zaokraglone rogi po prawej)
     final luska = RRect.fromRectAndCorners(
       Rect.fromLTRB(granicaCzubka, gora, prawy, gora + grubosc),
       topRight: Radius.circular(grubosc * 0.12),
@@ -424,18 +444,15 @@ class _BiegaczPainter extends CustomPainter {
     );
     canvas.drawRRect(luska, farba);
 
-    // Czubek (ogiwa - zaokraglony szpic po lewej)
     final czubek = Path()
       ..moveTo(granicaCzubka, gora)
       ..lineTo(lewy + dlugosc * 0.06, gora + grubosc * 0.14)
-      // luk czubka
       ..quadraticBezierTo(
           lewy, srodekY, lewy + dlugosc * 0.06, gora + grubosc * 0.86)
       ..lineTo(granicaCzubka, gora + grubosc)
       ..close();
     canvas.drawPath(czubek, farba);
 
-    // Linie predkosci za pociskiem (po prawej, bo leci w lewo) - jak na wzorze
     final kreska = Paint()
       ..color = koral.withOpacity(0.6)
       ..strokeWidth = grubosc * 0.12
@@ -449,8 +466,8 @@ class _BiegaczPainter extends CustomPainter {
         Offset(prawy + dlugosc * 0.12 + dl, srodekY + grubosc * 0.5), kreska);
   }
 
-  void _rysujLudzika(Canvas canvas, double x, double cyDol, double bok) {
-    // Prosty ludzik: okragla glowa, linia ciala, rece i nogi jako linie.
+  // cx = SRODEK postaci w poziomie, cyDol = poziom stop, bok = wysokosc postaci
+  void _rysujLudzika(Canvas canvas, double cx, double cyDol, double bok) {
     final farba = Paint()
       ..color = bursztyn
       ..style = PaintingStyle.stroke
@@ -458,31 +475,23 @@ class _BiegaczPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     final wypelnienie = Paint()..color = bursztyn;
 
-    final cx = x + bok * 0.42;
     final cyGora = cyDol - bok; // czubek glowy
 
-    // Glowa (okrag)
     final rGlowa = bok * 0.2;
-    final srodekGlowy = Offset(cx, cyGora + rGlowa);
-    canvas.drawCircle(srodekGlowy, rGlowa, wypelnienie);
+    canvas.drawCircle(Offset(cx, cyGora + rGlowa), rGlowa, wypelnienie);
 
-    // Tulow (linia w dol od glowy)
     final szyja = cyGora + rGlowa * 2;
     final biodra = cyDol - bok * 0.28;
     canvas.drawLine(Offset(cx, szyja), Offset(cx, biodra), farba);
 
-    // Rece (od gornej czesci tulowia) - jedna do przodu, jedna do tylu (bieg)
     final barki = szyja + bok * 0.08;
     canvas.drawLine(Offset(cx, barki),
         Offset(cx + bok * 0.26, barki + bok * 0.14), farba);
     canvas.drawLine(Offset(cx, barki),
         Offset(cx - bok * 0.24, barki - bok * 0.05), farba);
 
-    // Nogi (od bioder) - rozkroku jak w biegu
-    canvas.drawLine(Offset(cx, biodra),
-        Offset(cx + bok * 0.2, cyDol), farba);
-    canvas.drawLine(Offset(cx, biodra),
-        Offset(cx - bok * 0.18, cyDol), farba);
+    canvas.drawLine(Offset(cx, biodra), Offset(cx + bok * 0.2, cyDol), farba);
+    canvas.drawLine(Offset(cx, biodra), Offset(cx - bok * 0.18, cyDol), farba);
   }
 
   @override

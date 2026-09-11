@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class PopItScreen extends StatefulWidget {
   const PopItScreen({super.key});
@@ -58,6 +59,7 @@ class _PopItScreenState extends State<PopItScreen> {
         t.cancel();
         // Czas minal, a nie wszystkie klikniete -> blad
         setState(() => _faza = _Faza.blad);
+        Rekordy.zglos(context, Gry.popit, _poziom);
       }
     });
   }
@@ -69,6 +71,7 @@ class _PopItScreenState extends State<PopItScreen> {
       // Klikniety zly okrag -> blad
       _timer?.cancel();
       setState(() => _faza = _Faza.blad);
+      Rekordy.zglos(context, Gry.popit, _poziom);
       return;
     }
 
@@ -81,6 +84,7 @@ class _PopItScreenState extends State<PopItScreen> {
       _timer?.cancel();
       if (_poziom >= cel) {
         setState(() => _faza = _Faza.wygrana);
+        Rekordy.zglos(context, Gry.popit, cel);
       } else {
         _poziom++;
         // krotka przerwa i nastepny poziom
@@ -97,6 +101,7 @@ class _PopItScreenState extends State<PopItScreen> {
       appBar: AppBar(
         title: const Text('Szybkie klikanie'),
         actions: [
+          const RekordyPrzycisk(gra: Gry.popit),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa gra',

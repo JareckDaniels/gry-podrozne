@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class ReactionDuelScreen extends StatefulWidget {
   const ReactionDuelScreen({super.key});
@@ -17,17 +18,23 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
   Timer? _timer;
   int? _winner; // 1 (gora) lub 2 (dol)
   String _message = '';
+  DateTime? _sygnal; // kiedy zapalil sie sygnal "TERAZ"
 
   void _start() {
     setState(() {
       _phase = _Phase.czekaj;
       _winner = null;
       _message = '';
+      _sygnal = null;
     });
     // Losowe opoznienie 2-5 s, potem sygnal
     final ms = 2000 + Random().nextInt(3000);
     _timer = Timer(Duration(milliseconds: ms), () {
-      if (mounted) setState(() => _phase = _Phase.teraz);
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.teraz;
+        _sygnal = DateTime.now();
+      });
     });
   }
 
@@ -52,11 +59,18 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
       return;
     }
     if (_phase == _Phase.teraz) {
+      final start = _sygnal;
+      final ms = start == null
+          ? null
+          : DateTime.now().difference(start).inMilliseconds;
       setState(() {
         _phase = _Phase.koniec;
         _winner = player;
-        _message = 'Szybsza reakcja!';
+        _message = ms == null ? 'Szybsza reakcja!' : 'Reakcja: $ms ms';
       });
+      if (ms != null && ms > 0) {
+        Rekordy.zglos(context, Gry.refleks, ms);
+      }
     }
   }
 
@@ -72,6 +86,7 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
       appBar: AppBar(
         title: const Text('Pojedynek refleksu'),
         actions: [
+          const RekordyPrzycisk(gra: Gry.refleks),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa runda',

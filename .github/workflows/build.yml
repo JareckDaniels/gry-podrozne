@@ -25,6 +25,36 @@ jobs:
           flutter-version: '3.24.0'
           cache: true
 
+      - name: Przygotuj staly klucz podpisu
+        env:
+          KLUCZ: ${{ secrets.KLUCZ_B64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$KLUCZ" ]; then
+            echo "$KLUCZ" | base64 -d > ~/.android/debug.keystore
+            echo "Uzyto stalego klucza z sekretu KLUCZ_B64."
+            echo "NOWY_KLUCZ=nie" >> $GITHUB_ENV
+          else
+            echo "Brak sekretu KLUCZ_B64 - generuje nowy klucz."
+            keytool -genkeypair -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Gry podrozne, O=REIRO, C=PL"
+            mkdir -p klucz
+            base64 -w0 ~/.android/debug.keystore > klucz/klucz-base64.txt
+            echo "NOWY_KLUCZ=tak" >> $GITHUB_ENV
+          fi
+
+      - name: Wgraj nowy klucz do zapisania w sekrecie
+        if: env.NOWY_KLUCZ == 'tak'
+        uses: actions/upload-artifact@v4
+        with:
+          name: KLUCZ-zapisz-w-sekrecie
+          path: klucz/klucz-base64.txt
+          retention-days: 1
+
       - name: Wygeneruj swiezy szkielet Androida
         run: |
           # Usuwamy folder android z repo (moze byc niespojny po wczesniejszych

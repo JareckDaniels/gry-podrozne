@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../app_theme.dart';
+import '../rekordy.dart';
 
 class SimonScreen extends StatefulWidget {
   const SimonScreen({super.key});
@@ -94,6 +95,7 @@ class _SimonScreenState extends State<SimonScreen> {
         // cala sekwencja powtorzona poprawnie
         if (_sekwencja.length >= cel) {
           setState(() => _faza = _Faza.wygrana);
+          Rekordy.zglos(context, Gry.simon, cel);
         } else {
           // kolejna runda po krotkiej przerwie
           _timer = Timer(const Duration(milliseconds: 700), () {
@@ -104,6 +106,7 @@ class _SimonScreenState extends State<SimonScreen> {
     } else {
       // blad
       setState(() => _faza = _Faza.blad);
+      Rekordy.zglos(context, Gry.simon, _sekwencja.length);
     }
   }
 
@@ -113,6 +116,7 @@ class _SimonScreenState extends State<SimonScreen> {
       appBar: AppBar(
         title: const Text('Simon'),
         actions: [
+          const RekordyPrzycisk(gra: Gry.simon),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa gra',
