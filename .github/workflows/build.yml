@@ -68,6 +68,25 @@ jobs:
           sed -i 's/android:label="[^"]*"/android:label="Gry podrozne"/' \
             android/app/src/main/AndroidManifest.xml
 
+      - name: Podbij wersje Kotlina
+        run: |
+          # Swiezy szkielet Fluttera przychodzi ze starym Kotlinem, ktory nie
+          # potrafi skompilowac nowszych bibliotek (np. shared_preferences).
+          # Podnosimy sama wersje wtyczki Kotlina - reszty nie ruszamy.
+          PLIK=android/settings.gradle
+          if [ ! -f "$PLIK" ]; then PLIK=android/settings.gradle.kts; fi
+          echo "=== $PLIK PRZED ==="
+          cat "$PLIK"
+          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.24"/' "$PLIK"
+          # starszy uklad projektu (sprzed Fluttera 3.19) trzyma wersje gdzie indziej
+          if [ -f android/build.gradle ]; then
+            sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/" android/build.gradle
+          fi
+          echo "=== $PLIK PO ==="
+          cat "$PLIK"
+          echo "=== gradle-wrapper.properties ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Wgraj wlasne ikony
         run: |
           # flutter create nadpisuje ikony domyslnymi - przywracamy nasze
