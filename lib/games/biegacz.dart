@@ -193,7 +193,8 @@ class _BiegaczScreenState extends State<BiegaczScreen>
     _ticker.stop();
     setState(() {
       _faza = _Faza.koniec;
-      if (_wynik > _rekord) _rekord = _wynik;
+      if (UstawieniaRekordow.instance.wlaczone(Gry.biegacz) &&
+          _wynik > _rekord) _rekord = _wynik;
     });
     Rekordy.zglos(context, Gry.biegacz, _wynik);
   }
@@ -244,8 +245,10 @@ class _BiegaczScreenState extends State<BiegaczScreen>
                   top: 12,
                   right: 16,
                   child: Text(
-                    'HI ${_rekord.toString().padLeft(5, '0')}   '
-                    '${_wynik.toString().padLeft(5, '0')}',
+                    (UstawieniaRekordow.instance.wlaczone(Gry.biegacz)
+                        ? 'HI ${_rekord.toString().padLeft(5, '0')}   '
+                        : '') +
+                    _wynik.toString().padLeft(5, '0'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -286,7 +289,7 @@ class _BiegaczScreenState extends State<BiegaczScreen>
             const SizedBox(height: 8),
             Text(
               koniec
-                  ? 'Wynik: $_wynik   Rekord: $_rekord'
+                  ? 'Wynik: $_wynik${UstawieniaRekordow.instance.wlaczone(Gry.biegacz) ? '   Rekord: $_rekord' : ''}'
                   : 'Dotknij ekran, aby skoczyć.\nOmijaj przeszkody!',
               textAlign: TextAlign.center,
               style: const TextStyle(

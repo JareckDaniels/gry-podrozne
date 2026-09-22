@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_theme.dart';
+import 'rekordy.dart';
+import 'ustawienia.dart';
 import 'games/tic_tac_toe.dart';
 import 'games/connect_four.dart';
 import 'games/reaction_duel.dart';
@@ -11,13 +13,14 @@ import 'games/popit.dart';
 import 'games/biegacz.dart';
 import 'games/balon.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Domyslnie CALA aplikacja chodzi tylko w pionie - menu i gry planszowe
   // rozjezdzaly sie po obroceniu telefonu.
   // Wyjatek robia Biegacz i Balon: te dwa ekrany same odblokowuja obrot
   // przy wejsciu i przywracaja pion przy wyjsciu (patrz biegacz.dart / balon.dart).
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await UstawieniaRekordow.instance.wczytaj();
   runApp(const GryApp());
 }
 
@@ -131,14 +134,30 @@ class MenuScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 12),
-              const Text(
-                'Gry podróżne',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.tekst,
-                  letterSpacing: -0.5,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Gry podróżne',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.tekst,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Ustawienia',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UstawieniaScreen(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               const Text(

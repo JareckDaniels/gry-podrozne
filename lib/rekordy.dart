@@ -24,6 +24,48 @@ class Gry {
   static const zgadywanka = Gra('zgadywanka', 'Zgadywanka', 'słów');
 }
 
+// Ustawienia są niezależne od zapisanych wyników: wyłączenie niczego nie kasuje.
+class UstawieniaRekordow extends ChangeNotifier {
+  static final instance = UstawieniaRekordow();
+  static const _klucz = 'high_score_wylaczone_gry';
+  static const gry = [
+    Gry.refleks, Gry.bitwa, Gry.zgadywanka, Gry.simon,
+    Gry.popit, Gry.biegacz, Gry.balon,
+  ];
+  Set<String> _wylaczone = {};
+
+  bool wlaczone(Gra gra) => !_wylaczone.contains(gra.klucz);
+  bool get wszystkieWlaczone => gry.every(wlaczone);
+  int get liczbaWlaczonych => gry.where(wlaczone).length;
+
+  Future<void> wczytaj() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _wylaczone = (prefs.getStringList(_klucz) ?? <String>[]).toSet();
+      notifyListeners();
+    } catch (_) {
+      // Brak ustawień zachowuje dotychczasowe działanie aplikacji.
+    }
+  }
+
+  Future<void> ustaw(bool wartosc, {Gra? gra}) async {
+    final nowe = Set<String>.from(_wylaczone);
+    for (final g in gra == null ? gry : [gra]) {
+      if (wartosc) {
+        nowe.remove(g.klucz);
+      } else {
+        nowe.add(g.klucz);
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setStringList(_klucz, nowe.toList())) {
+      throw StateError('Nie udało się zapisać ustawień.');
+    }
+    _wylaczone = nowe;
+    notifyListeners();
+  }
+}
+
 // Pojedynczy zapisany rekord.
 class Wpis {
   final String imie;
@@ -93,7 +135,7 @@ class Rekordy {
   // Zglasza wynik po skonczonej grze.
   // Okienko z imieniem pojawia sie TYLKO gdy to nowy najlepszy wynik.
   static Future<void> zglos(BuildContext context, Gra gra, int wynik) async {
-    if (wynik <= 0) return;
+    if (wynik <= 0 || !UstawieniaRekordow.instance.wlaczone(gra)) return;
     final lista = await wczytaj(gra);
     final czyRekord = lista.isEmpty
         ? true
@@ -181,6 +223,7 @@ class Rekordy {
 
   // Okienko z tabela najlepszych wynikow.
   static Future<void> pokaz(BuildContext context, Gra gra) async {
+    if (!UstawieniaRekordow.instance.wlaczone(gra)) return;
     final lista = await wczytaj(gra);
     if (!context.mounted) return;
     await showDialog<void>(
@@ -305,10 +348,15 @@ class RekordyPrzycisk extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.emoji_events_outlined),
-      tooltip: 'Najlepsze wyniki',
-      onPressed: () => Rekordy.pokaz(context, gra),
+    return ListenableBuilder(
+      listenable: UstawieniaRekordow.instance,
+      builder: (context, _) => UstawieniaRekordow.instance.wlaczone(gra)
+          ? IconButton(
+              icon: const Icon(Icons.emoji_events_outlined),
+              tooltip: 'Najlepsze wyniki',
+              onPressed: () => Rekordy.pokaz(context, gra),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

@@ -178,7 +178,8 @@ class _BalonScreenState extends State<BalonScreen>
     _ticker.stop();
     setState(() {
       _faza = _Faza.koniec;
-      if (_wynik > _rekord) _rekord = _wynik;
+      if (UstawieniaRekordow.instance.wlaczone(Gry.balon) &&
+          _wynik > _rekord) _rekord = _wynik;
     });
     Rekordy.zglos(context, Gry.balon, _wynik);
   }
@@ -242,7 +243,7 @@ class _BalonScreenState extends State<BalonScreen>
                   top: 12,
                   right: 16,
                   child: Text(
-                    'Rekord $_rekord   Punkty $_wynik',
+                    '${UstawieniaRekordow.instance.wlaczone(Gry.balon) ? 'Rekord $_rekord   ' : ''}Punkty $_wynik',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -282,7 +283,7 @@ class _BalonScreenState extends State<BalonScreen>
             const SizedBox(height: 8),
             Text(
               koniec
-                  ? 'Zebrane punkty: $_wynik   Rekord: $_rekord'
+                  ? 'Zebrane punkty: $_wynik${UstawieniaRekordow.instance.wlaczone(Gry.balon) ? '   Rekord: $_rekord' : ''}'
                   : 'Przesuwaj balon palcem w bok.\n'
                       'Wlatuj w przerwy i zbieraj kółka!',
               textAlign: TextAlign.center,
