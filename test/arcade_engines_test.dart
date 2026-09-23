@@ -71,7 +71,8 @@ void main() {
   check(balloon.x <= 376, 'Balon nie opuszcza ekranu');
   balloon.reset();
   balloon.spawnIn = 100;
-  balloon.gates.add(BalloonGate(balloon.balloonY, 200, 130));
+  balloon.waves
+      .add(BalloonWave(balloon.balloonY, 200, [BalloonObstacle(35, 60)]));
   balloon.update(1 / 60);
   check(!balloon.over, 'Przejście jest bezpieczne');
   balloon.x = balloon.target = 60;
@@ -83,28 +84,29 @@ void main() {
   balloon.update(1 / 60);
   check(balloon.score == 1 && balloon.coins.isEmpty, 'Kółko liczone jeden raz');
   balloon.time = 1000;
-  check(balloon.speed == 190, 'Limit prędkości Balonu');
+  check(balloon.speed == 185, 'Limit prędkości Balonu');
   balloon.reset();
   for (var i = 0; i < 3000; i++) {
     // Test generatora i korytarzy, bez kolizji gracza.
-    balloon.gates.clear();
+    balloon.waves.clear();
     balloon.coins.clear();
     balloon.update(1 / 60);
-    for (final g in balloon.gates) {
+    for (final wave in balloon.waves) {
       check(
-          g.gapWidth >= 96 &&
-              g.gap - g.gapWidth / 2 >= 16 &&
-              g.gap + g.gapWidth / 2 <= balloon.width - 16,
-          'Bezpieczna szerokość szczeliny');
+          wave.obstacles
+              .every((o) => o.x >= 0 && o.x + o.width <= balloon.width),
+          'Przeszkody w granicach planszy');
     }
   }
+
   balloon.resize(900, 420);
   check(balloon.x.isFinite && balloon.x >= 24 && balloon.x <= 876,
       'Obrót zachowuje poprawną pozycję');
   balloon.reset();
   balloon.spawnIn = 100;
   balloon.update(30);
-  check(balloon.travelled < 6, 'Przycięcie nie przeskakuje przeszkód');
+  check(balloon.travelled <= balloon.speed * 0.05 + 0.001,
+      'Przycięcie nie przeskakuje przeszkód');
   print(
       'Balon i Biegacz: skoki, kolizje, płynny ruch, generator, obrót i limity — OK.');
 }

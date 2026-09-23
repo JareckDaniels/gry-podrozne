@@ -133,3 +133,15 @@ lokalnie. Paczka zawiera źródła, bez skompilowanego APK.
 - Bonusy +1 i +2 dodają dokładnie jedną lub dwie piłki, zamiast mnożyć
   wszystkie obecne piłki. Życie oznaczone samym sercem.
 - Testy silnika obejmują nowe bonusy, limity i ich reset przy nowej grze.
+
+## Wersja 1.13.0 — nowe przeszkody i zmiany tempa
+
+- Balon: oddzielne krótkie platformy oraz spadające, obracające się skały.
+  Fale mają kilka wolnych torów; nie wymagają stałego zygzaka lewo–prawo.
+- Co 20 sekund pojawia się pięciosekundowy podmuch przyspieszający lot,
+  poprzedzony ostrzeżeniem. Prędkość bazowa także stopniowo wzrasta.
+- Biegacz: od 1000 m dochodzą dziury w podłożu, od 2000 m szersze.
+  Oznaczone krawędzie, spadanie w przepaść i odstępy na bezpieczne lądowanie.
+- Testy logiki sprawdzają aktywne przejścia Balonu przez 150 sekund, podmuchy,
+  różnorodność tras oraz skoki nad dziurami i upadek w Biegaczu.
+  Testów ekranów Fluttera nie uruchomiono lokalnie; pozostają w CI.

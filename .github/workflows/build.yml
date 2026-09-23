@@ -111,6 +111,7 @@ jobs:
         run: |
           dart test/arcade_engines_test.dart
           dart test/balloon_balance_test.dart
+          dart test/runner_pits_test.dart
           dart test/game_timers_test.dart
 
       - name: Sprawdz wszystkie ekrany gier

@@ -204,7 +204,11 @@ class _ArcadeScreenState extends State<ArcadeScreen>
                 child: IgnorePointer(
                     child: Text(
                         widget.balloon
-                            ? 'PRZESUWAJ PALCEM W BOK'
+                            ? ((game as BalloonEngine).gust > 0
+                                ? 'PODMUCH! SZYBSZY LOT'
+                                : (game as BalloonEngine).gustWarning
+                                    ? 'UWAGA — NADCHODZI PODMUCH'
+                                    : 'OMIJAJ PLATFORMY I SPADAJĄCE SKAŁY')
                             : 'DOTKNIJ, ABY SKOCZYĆ · PRZYTRZYMAJ, ABY SKOCZYĆ WYŻEJ',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
@@ -255,8 +259,8 @@ class _ArcadeScreenState extends State<ArcadeScreen>
                             : game.over
                                 ? 'Twój wynik: ${game.score} ${record.jednostka}'
                                 : widget.balloon
-                                    ? 'Prowadź balon przez przerwy.\nZbieraj złote kółka i unikaj barier.'
-                                    : 'Dotknij, aby skoczyć, przytrzymaj na wyższy skok.\nPod latającymi przeszkodami przebiegnij.',
+                                    ? 'Omijaj krótkie platformy i spadające skały.\nZbieraj złote kółka. Co 20 sekund nadchodzi podmuch!'
+                                    : 'Dotknij, aby skoczyć, przytrzymaj na wyższy skok.\nPod shurikenami przebiegnij. Po 1000 m przeskakuj też dziury w ziemi.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                             height: 1.45, color: AppColors.tekstSzary)),
@@ -371,6 +375,27 @@ class _ArcadePainter extends CustomPainter {
           c, Rect.fromLTWH(x, ground + 16, 10, 2), const Color(0xFF344251), 1);
     }
     for (final o in g.obstacles) {
+      if (o.pit) {
+        final pitRect = Rect.fromLTWH(o.x, ground, o.width, g.height - ground);
+        p
+          ..style = PaintingStyle.fill
+          ..shader = const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF070C18), Color(0xFF182638)])
+              .createShader(pitRect);
+        c.drawRect(pitRect, p);
+        p.shader = null;
+        rounded(c, Rect.fromLTWH(o.x - 4, ground, 4, 28), AppColors.koral, 1);
+        rounded(
+            c, Rect.fromLTWH(o.x + o.width, ground, 4, 28), AppColors.koral, 1);
+        // Oznaczone krawędzie są widoczne z wyprzedzeniem.
+        for (var i = 0; i < 3; i++) {
+          rounded(c, Rect.fromLTWH(o.x - 24 + i * 7, ground - 3, 4, 3),
+              AppColors.bursztyn, 1);
+        }
+        continue;
+      }
       final rect =
           Rect.fromLTWH(o.x, ground - o.bottom - o.height, o.width, o.height);
       if (o.flying) {
@@ -480,18 +505,54 @@ class _ArcadePainter extends CustomPainter {
       c.drawOval(
           Rect.fromCenter(center: Offset(x, y), width: 75, height: 16), p);
     }
-    for (final gate in g.gates) {
-      for (final rect in [
-        Rect.fromLTRB(0, gate.y - 8, gate.gap - gate.gapWidth / 2, gate.y + 8),
-        Rect.fromLTRB(
-            gate.gap + gate.gapWidth / 2, gate.y - 8, g.width, gate.y + 8)
-      ]) {
-        rounded(c, rect, const Color(0xFFDB7B85), 3);
-        rounded(c, Rect.fromLTWH(rect.left, rect.top, rect.width, 3),
-            Colors.white.withOpacity(0.25), 1);
-        for (var x = rect.left + 10; x < rect.right - 5; x += 20) {
-          rounded(c, Rect.fromLTWH(x, rect.top + 5, 4, 6),
-              AppColors.tlo.withOpacity(0.25), 1);
+    if (g.gust > 0) {
+      p
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.white.withOpacity(0.12 * g.gust);
+      for (var i = 0; i < 12; i++) {
+        final x = (i * 71.0 + 13) % g.width;
+        final y = (i * 117 + g.travelled * 1.8) % g.height;
+        c.drawLine(Offset(x, y - 22), Offset(x, y), p);
+      }
+    }
+    for (final wave in g.waves) {
+      for (final o in wave.obstacles) {
+        final rect =
+            Rect.fromLTWH(o.x, wave.y - o.height / 2, o.width, o.height);
+        if (o.rock) {
+          p
+            ..style = PaintingStyle.fill
+            ..shader = const RadialGradient(
+                    center: Alignment(-0.4, -0.5),
+                    colors: [Color(0xFFD1B2A1), Color(0xFF795D66)])
+                .createShader(rect);
+          c.drawOval(rect, p);
+          p.shader = null;
+          c.save();
+          c.translate(rect.center.dx, rect.center.dy);
+          c.rotate(g.time * 1.7 + o.x);
+          p.color = const Color(0xFF594954);
+          c.drawOval(
+              Rect.fromCenter(
+                  center: Offset(-o.width * 0.16, -4),
+                  width: o.width * 0.25,
+                  height: o.width * 0.18),
+              p);
+          c.drawCircle(
+              Offset(o.width * 0.19, o.width * 0.15), o.width * 0.08, p);
+          c.restore();
+        } else {
+          rounded(c, rect, const Color(0xFFDB7B85), 5);
+          rounded(
+              c,
+              Rect.fromLTWH(rect.left + 3, rect.top + 2, rect.width - 6, 3),
+              Colors.white.withOpacity(0.3),
+              2);
+          for (var x = rect.left + 10; x < rect.right - 5; x += 20) {
+            rounded(c, Rect.fromLTWH(x, rect.top + 7, 4, 5),
+                AppColors.tlo.withOpacity(0.25), 1);
+          }
         }
       }
     }
