@@ -100,7 +100,8 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
         ? (delta.dx > 0 ? SnakeDirection.right : SnakeDirection.left)
         : (delta.dy > 0 ? SnakeDirection.down : SnakeDirection.up);
     _game.turn(direction);
-    _gestureStart = null; // Jeden gest = jeden skręt, bez czekania na puszczenie.
+    _gestureStart =
+        null; // Jeden gest = jeden skręt, bez czekania na puszczenie.
   }
 
   @override
@@ -109,7 +110,9 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
         ? 'Zbieraj piksele i rośnij!'
         : _game.over
             ? (_game.won ? 'Brawo! Cała plansza jest Twoja!' : 'Koniec gry!')
-            : _paused ? 'Pauza' : 'Uważaj na ściany i własny ogon';
+            : _paused
+                ? 'Pauza'
+                : 'Uważaj na ściany i własny ogon';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wąż'),
@@ -118,22 +121,30 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
             IconButton(
               tooltip: 'Najlepsze wyniki',
               icon: const Icon(Icons.emoji_events_outlined),
-              onPressed: _reporting ? null : () {
-                _pause();
-                Rekordy.pokaz(context, Gry.snake);
-              },
+              onPressed: _reporting
+                  ? null
+                  : () {
+                      _pause();
+                      Rekordy.pokaz(context, Gry.snake);
+                    },
             ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: AppTheme.panel(AppColors.zielen),
               child: Column(children: [
-                Text('Wynik: ${_game.score}', style: const TextStyle(
-                  fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.zielen,
-                )),
+                Text('Wynik: ${_game.score}',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.zielen,
+                    )),
                 const SizedBox(height: 4),
                 Text(status, textAlign: TextAlign.center),
               ]),
@@ -155,23 +166,32 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
                             'w lewo lub w prawo.',
                         child: CustomPaint(
                           painter: _SnakePainter(
-                            List.of(_game.body), _game.food, _game.direction,
+                            List.of(_game.body),
+                            _game.food,
+                            _game.direction,
                           ),
                           child: Center(
-                            child: !_running ? Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.tlo.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                !_started ? 'SNAKE' : _game.over
-                                    ? (_game.won ? 'WYGRANA!' : 'KONIEC GRY')
-                                    : 'PAUZA',
-                                style: const TextStyle(fontSize: 24,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ) : null,
+                            child: !_running
+                                ? Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.tlo.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      !_started
+                                          ? 'SNAKE'
+                                          : _game.over
+                                              ? (_game.won
+                                                  ? 'WYGRANA!'
+                                                  : 'KONIEC GRY')
+                                              : 'PAUZA',
+                                      style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                       ),
@@ -182,7 +202,8 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Przesuwaj palcem po planszy: ↑ ↓ ← →\n'
+              child: Text(
+                  'Przesuwaj palcem po planszy: ↑ ↓ ← →\n'
                   '1 piksel = 1 punkt. Ściana lub ogon kończy grę.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.tekstSzary)),
@@ -192,15 +213,25 @@ class _SnakeScreenState extends State<SnakeScreen> with WidgetsBindingObserver {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _reporting ? null : !_started || _game.over
-                      ? _start : _paused ? _resume : _pause,
+                  onPressed: _reporting
+                      ? null
+                      : !_started || _game.over
+                          ? _start
+                          : _paused
+                              ? _resume
+                              : _pause,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.zielen,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.tlo,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text(!_started ? 'Start' : _game.over
-                      ? 'Zagraj jeszcze raz' : _paused ? 'Wznów' : 'Pauza'),
+                  child: Text(!_started
+                      ? 'Start'
+                      : _game.over
+                          ? 'Zagraj jeszcze raz'
+                          : _paused
+                              ? 'Wznów'
+                              : 'Pauza'),
                 ),
               ),
             ),
@@ -225,34 +256,44 @@ class _SnakePainter extends CustomPainter {
     paint.color = const Color(0xFF92A16F);
     paint.strokeWidth = 0.5;
     for (var x = 1; x < SnakeEngine.columns; x++) {
-      canvas.drawLine(Offset(x * cell, 0), Offset(x * cell, size.height), paint);
+      canvas.drawLine(
+          Offset(x * cell, 0), Offset(x * cell, size.height), paint);
     }
     for (var y = 1; y < SnakeEngine.rows; y++) {
       canvas.drawLine(Offset(0, y * cell), Offset(size.width, y * cell), paint);
     }
     paint.color = const Color(0xFF263522);
     for (final part in body) {
-      canvas.drawRect(Rect.fromLTWH(part.x * cell + 1, part.y * cell + 1,
-          cell - 2, cell - 2), paint);
+      canvas.drawRect(
+          Rect.fromLTWH(
+              part.x * cell + 1, part.y * cell + 1, cell - 2, cell - 2),
+          paint);
     }
     final snack = food;
     if (snack != null) {
-      canvas.drawRect(Rect.fromLTWH((snack.x + 0.22) * cell,
-          (snack.y + 0.22) * cell, cell * 0.56, cell * 0.56), paint);
+      canvas.drawRect(
+          Rect.fromLTWH((snack.x + 0.22) * cell, (snack.y + 0.22) * cell,
+              cell * 0.56, cell * 0.56),
+          paint);
     }
     // Dwa jasne piksele oczu wskazują aktualny kierunek głowy.
     paint.color = const Color(0xFFCFDCA6);
     final head = body.first;
-    final horizontal = direction == SnakeDirection.left ||
-        direction == SnakeDirection.right;
-    final front = direction == SnakeDirection.right ||
-        direction == SnakeDirection.down ? 0.7 : 0.3;
+    final horizontal =
+        direction == SnakeDirection.left || direction == SnakeDirection.right;
+    final front =
+        direction == SnakeDirection.right || direction == SnakeDirection.down
+            ? 0.7
+            : 0.3;
     for (final side in [0.3, 0.7]) {
-      canvas.drawRect(Rect.fromCenter(
-        center: Offset((head.x + (horizontal ? front : side)) * cell,
-            (head.y + (horizontal ? side : front)) * cell),
-        width: cell * 0.15, height: cell * 0.15,
-      ), paint);
+      canvas.drawRect(
+          Rect.fromCenter(
+            center: Offset((head.x + (horizontal ? front : side)) * cell,
+                (head.y + (horizontal ? side : front)) * cell),
+            width: cell * 0.15,
+            height: cell * 0.15,
+          ),
+          paint);
     }
     paint
       ..color = const Color(0xFF263522)

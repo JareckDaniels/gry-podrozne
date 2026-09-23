@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../app_theme.dart';
+import '../game_clock.dart';
 import '../rekordy.dart';
 
 class SimonScreen extends StatefulWidget {
@@ -14,6 +15,8 @@ class SimonScreen extends StatefulWidget {
 enum _Faza { start, pokaz, powtarzaj, blad, wygrana }
 
 class _SimonScreenState extends State<SimonScreen> {
+  final _clock = GameClock();
+
   static const int cel = 10; // dojscie do 10 = wygrana
 
   // Kolory pol: 0=zielony, 1=czerwony, 2=zolty, 3=niebieski
@@ -33,11 +36,13 @@ class _SimonScreenState extends State<SimonScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _clock.dispose();
     super.dispose();
   }
 
   void _nowaGra() {
+    _clock.cancelAll();
+    _clock.resume();
     _timer?.cancel();
     _sekwencja.clear();
     _krokGracza = 0;
@@ -58,7 +63,7 @@ class _SimonScreenState extends State<SimonScreen> {
     });
     int i = 0;
     // Co 700 ms zapalamy kolejny kolor na ~400 ms
-    _timer = Timer.periodic(const Duration(milliseconds: 700), (t) {
+    _timer = _clock.periodic(const Duration(milliseconds: 700), (t) {
       if (!mounted) return;
       if (i >= _sekwencja.length) {
         t.cancel();
@@ -70,7 +75,7 @@ class _SimonScreenState extends State<SimonScreen> {
       }
       final kolor = _sekwencja[i];
       setState(() => _podswietlone = kolor);
-      Timer(const Duration(milliseconds: 400), () {
+      _clock.once(const Duration(milliseconds: 400), () {
         if (mounted) setState(() => _podswietlone = -1);
       });
       i++;
@@ -78,11 +83,11 @@ class _SimonScreenState extends State<SimonScreen> {
   }
 
   void _tapPole(int index) {
-    if (_faza != _Faza.powtarzaj) return;
+    if (_clock.paused || _faza != _Faza.powtarzaj) return;
 
     // Krotki blysk na dotkniecie
     setState(() => _podswietlone = index);
-    Timer(const Duration(milliseconds: 200), () {
+    _clock.once(const Duration(milliseconds: 200), () {
       if (mounted && _faza == _Faza.powtarzaj) {
         setState(() => _podswietlone = -1);
       }
@@ -97,8 +102,9 @@ class _SimonScreenState extends State<SimonScreen> {
           setState(() => _faza = _Faza.wygrana);
           Rekordy.zglos(context, Gry.simon, cel);
         } else {
+          _faza = _Faza.pokaz;
           // kolejna runda po krotkiej przerwie
-          _timer = Timer(const Duration(milliseconds: 700), () {
+          _timer = _clock.once(const Duration(milliseconds: 700), () {
             if (mounted) _dodajKrokIPokaz();
           });
         }
@@ -106,7 +112,7 @@ class _SimonScreenState extends State<SimonScreen> {
     } else {
       // blad
       setState(() => _faza = _Faza.blad);
-      Rekordy.zglos(context, Gry.simon, _sekwencja.length);
+      Rekordy.zglos(context, Gry.simon, _sekwencja.length - 1);
     }
   }
 
@@ -116,7 +122,8 @@ class _SimonScreenState extends State<SimonScreen> {
       appBar: AppBar(
         title: const Text('Simon'),
         actions: [
-          const RekordyPrzycisk(gra: Gry.simon),
+          GamePauseButton(clock: _clock),
+          RekordyPrzycisk(gra: Gry.simon, beforeOpen: _clock.pause),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa gra',
@@ -124,26 +131,28 @@ class _SimonScreenState extends State<SimonScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _pasekStanu(),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: _plansza(),
+      body: GamePauseLayer(
+          clock: _clock,
+          child: SafeArea(
+            child: Column(
+              children: [
+                _pasekStanu(),
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: _plansza(),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                _dolnyPasek(),
+                const SizedBox(height: 16),
+              ],
             ),
-            _dolnyPasek(),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          )),
     );
   }
 
@@ -173,10 +182,7 @@ class _SimonScreenState extends State<SimonScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppColors.tloJasniejsze,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: AppTheme.panel(AppColors.zielen),
       child: Column(
         children: [
           Text(
@@ -208,12 +214,14 @@ class _SimonScreenState extends State<SimonScreen> {
         return GestureDetector(
           onTap: () => _tapPole(i),
           child: AnimatedContainer(
+            padding: const EdgeInsets.all(12),
             duration: const Duration(milliseconds: 120),
             decoration: BoxDecoration(
               color: swieci
                   ? _kolory[i]
                   : _kolory[i].withOpacity(aktywne ? 0.55 : 0.35),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: _kolory[i].withOpacity(0.8), width: 2),
               boxShadow: swieci
                   ? [
                       BoxShadow(
@@ -224,6 +232,16 @@ class _SimonScreenState extends State<SimonScreen> {
                     ]
                   : null,
             ),
+            child: Center(
+                child: Icon(
+                    [
+                      Icons.circle,
+                      Icons.square,
+                      Icons.change_history,
+                      Icons.star
+                    ][i],
+                    size: 34,
+                    color: Colors.white.withOpacity(swieci ? 1 : 0.45))),
           ),
         );
       }),
@@ -254,14 +272,14 @@ class _SimonScreenState extends State<SimonScreen> {
           onPressed: onTap,
           style: ElevatedButton.styleFrom(
             backgroundColor: kolor,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.tlo,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: Text(tekst,
-              style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.w600)),
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         ),
       ),
     );

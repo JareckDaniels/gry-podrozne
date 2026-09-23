@@ -35,6 +35,7 @@ class GryApp extends StatelessWidget {
       title: 'Gry podróżne',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
+      builder: (context, child) => GameBackdrop(child: child!),
       home: const MenuScreen(),
     );
   }
@@ -156,7 +157,7 @@ class MenuScreen extends StatelessWidget {
                     child: Text(
                       'Gry podróżne',
                       style: TextStyle(
-                        fontSize: 34,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: AppColors.tekst,
                         letterSpacing: -0.5,
@@ -177,7 +178,7 @@ class MenuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Jeden telefon, dwoje graczy. Podajcie sobie ekran.',
+                'Małe wyzwania. Wielka frajda. Solo lub we dwoje.',
                 style: TextStyle(fontSize: 15, color: AppColors.tekstSzary),
               ),
               const SizedBox(height: 24),
@@ -221,14 +222,15 @@ class _GameTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.tloJasniejsze,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(22),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => entry.builder()),
         ),
-        child: Padding(
+        child: Ink(
+          decoration: AppTheme.panel(entry.accent),
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [

@@ -108,10 +108,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppColors.tloJasniejsze,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: AppTheme.panel(AppColors.bursztyn),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -133,9 +130,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
                 child: Text(
                   _winner ?? _current,
                   style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: color),
+                      fontSize: 26, fontWeight: FontWeight.bold, color: color),
                 ),
               ),
             ),
@@ -158,8 +153,10 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
         final mark = _board[i];
         final isWin = _winLine?.contains(i) ?? false;
         return GestureDetector(
+          key: ValueKey('tic-$i'),
           onTap: () => _tap(i),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
               color: isWin
                   ? (_winner != null
@@ -172,16 +169,22 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
                   : null,
             ),
             child: Center(
-              child: mark == null
-                  ? null
-                  : Text(
-                      mark,
-                      style: TextStyle(
-                        fontSize: 64,
-                        fontWeight: FontWeight.bold,
-                        color: _markColor(mark),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, animation) =>
+                    ScaleTransition(scale: animation, child: child),
+                child: mark == null
+                    ? const SizedBox.shrink()
+                    : Text(
+                        mark,
+                        key: ValueKey(mark),
+                        style: TextStyle(
+                          fontSize: 64,
+                          fontWeight: FontWeight.bold,
+                          color: _markColor(mark),
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         );

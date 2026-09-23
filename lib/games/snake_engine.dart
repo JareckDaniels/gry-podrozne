@@ -48,7 +48,10 @@ class SnakeEngine {
     final eating = head == food;
     // Ogon opuszcza swoje pole w tym samym kroku, o ile wąż nie rośnie.
     final occupied = eating ? body : body.take(body.length - 1);
-    if (head.x < 0 || head.x >= columns || head.y < 0 || head.y >= rows ||
+    if (head.x < 0 ||
+        head.x >= columns ||
+        head.y < 0 ||
+        head.y >= rows ||
         occupied.contains(head)) {
       over = true;
       return;

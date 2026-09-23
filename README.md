@@ -60,3 +60,46 @@ rekordów po ponownym włączeniu.
   30. poziomu.
 - Testy: `dart test/arkanoid_engine_test.dart` oraz
   `flutter test test/arkanoid_widget_test.dart`. Oba kroki uruchamia GitHub Actions.
+
+## Wersja 1.12.0 — odświeżenie wszystkich gier
+
+### Wygląd
+- Wspólna ciemna paleta, pastelowe akcenty, gradientowe tło aplikacji,
+  karty statusu, czytelniejsze przyciski i odświeżone menu.
+- Kółko i krzyżyk: animacja pojawiania się znaku i podświetlania wygranej.
+- Czwórki: opadanie krążka z odbiciem i blokada kolejnego ruchu do lądowania.
+- Simon: symbole oprócz kolorów, nowe pola i anulowanie starych błysków po restarcie.
+- Szybkie klikanie: oznaczenie aktywnych i zaliczonych pól, blokada dotyku między poziomami.
+- Pojedynek refleksu i Bitwa klikania: odświeżone strefy graczy i reakcja na dotknięcie.
+- Zgadywanka: przewijany ekran, zawijanie długich słów i poprawiona obsługa fokusu.
+- Wąż: nowy panel wyniku, zachowany klasyczny ekran LCD i ruch po siatce.
+- Arkanoid: nowe cieniowanie planszy i klocków, lepiej widoczne piłki.
+
+### Balon
+- Nowy krajobraz, chmury, cieniowana czasza i czytelne bariery.
+- Wygładzony ruch do pozycji palca, bez teleportowania przez przeszkody.
+- Fale z gwarantowanym przejściem; ograniczenie przeskoku szczeliny między falami.
+- Dokładniejsze kolizje czaszy i kosza oraz koliste zbieranie kółek.
+- Ograniczona maksymalna prędkość, stabilna symulacja 120 kroków na sekundę.
+
+### Biegacz
+- Przewijane warstwy krajobrazu, animowana postać, cień i nowe przeszkody.
+- Krótkie dotknięcie daje niższy skok, przytrzymanie wyższy.
+- Bufor 120 ms przy lądowaniu; bez dodatkowego skoku w powietrzu.
+- Grawitacja niezależna od liczby klatek, limit prędkości i odstępy pozwalające wylądować.
+- Kolizje dopasowane do przeszkód; pod latającą przeszkodą można przebiec.
+
+### Pauza i poprawki
+- Balon i Biegacz zatrzymują się przy obrocie, otwarciu rekordów i wyjściu do tła.
+  Wznowienie jest ręczne. Obie gry nadal działają w pionie i poziomie.
+- Simon, PopIt, Refleks i Bitwa mają pauzę zatrzymującą zegar i opóźnione akcje.
+- Liczniki mierzą rzeczywisty czas aktywnej gry, zamiast sumować wywołania timera.
+- Simon i PopIt zgłaszają liczbę ukończonych poziomów, bez doliczania przegranego.
+- Zgadywanka nie pozwala wielokrotnie zaliczyć tego samego słowa.
+- Zachowano klucze rekordów, ustawienia HIGH-SCORE i odblokowane poziomy Arkanoida.
+
+### Sprawdzenie
+Lokalnie przeszły testy silników Balonu, Biegacza, Arkanoida i Węża oraz test
+pauzowanego zegara. Analiza nowych silników i zegara nie zgłosiła problemów.
+Testy widoków wszystkich gier dodano do GitHub Actions; nie zostały uruchomione
+lokalnie. Paczka zawiera źródła, bez skompilowanego APK.

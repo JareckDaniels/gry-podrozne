@@ -473,9 +473,15 @@ class _ArkanoidPainter extends CustomPainter {
         size.width / ArkanoidEngine.width, size.height / ArkanoidEngine.height);
     canvas.clipRect(
         const Rect.fromLTWH(0, 0, ArkanoidEngine.width, ArkanoidEngine.height));
-    final paint = Paint()..color = const Color(0xFF0E1321);
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF182940), Color(0xFF0E1321)],
+      ).createShader(const Rect.fromLTWH(0, 0, 360, 560));
     canvas.drawRect(const Rect.fromLTWH(0, 0, 360, 560), paint);
-    paint.color = const Color(0xFF1E293E);
+    paint.shader = null;
+    paint.color = const Color(0xFF25334A);
     for (var y = 12.0; y < 560; y += 20) {
       for (var x = 10.0; x < 360; x += 20) {
         canvas.drawRect(Rect.fromLTWH(x, y, 1, 1), paint);
@@ -483,8 +489,17 @@ class _ArkanoidPainter extends CustomPainter {
     }
     for (final brick in game.bricks) {
       paint.color = colors[brick.color];
-      canvas.drawRect(
-          Rect.fromLTWH(brick.x, brick.y, brick.width, brick.height), paint);
+      final rect = Rect.fromLTWH(brick.x, brick.y, brick.width, brick.height);
+      paint.shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors[brick.color],
+            Color.alphaBlend(Colors.black.withOpacity(0.2), colors[brick.color])
+          ]).createShader(rect);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(4)), paint);
+      paint.shader = null;
       paint.color = Colors.white.withOpacity(0.3);
       canvas.drawRect(Rect.fromLTWH(brick.x, brick.y, brick.width, 3), paint);
       if (brick.hits > 1) {
@@ -509,6 +524,9 @@ class _ArkanoidPainter extends CustomPainter {
             ArkanoidEngine.paddleY, game.paddleWidth, 3),
         paint);
     for (final ball in game.balls) {
+      paint.color = AppColors.bursztyn.withOpacity(0.13);
+      canvas.drawCircle(
+          Offset(ball.x, ball.y), ArkanoidEngine.radius * 2.2, paint);
       paint.color = AppColors.tekst;
       canvas.drawCircle(Offset(ball.x, ball.y), ArkanoidEngine.radius, paint);
     }

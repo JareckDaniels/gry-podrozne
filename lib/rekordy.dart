@@ -31,8 +31,15 @@ class UstawieniaRekordow extends ChangeNotifier {
   static final instance = UstawieniaRekordow();
   static const _klucz = 'high_score_wylaczone_gry';
   static const gry = [
-    Gry.refleks, Gry.bitwa, Gry.zgadywanka, Gry.simon,
-    Gry.popit, Gry.biegacz, Gry.balon, Gry.snake, Gry.arkanoid,
+    Gry.refleks,
+    Gry.bitwa,
+    Gry.zgadywanka,
+    Gry.simon,
+    Gry.popit,
+    Gry.biegacz,
+    Gry.balon,
+    Gry.snake,
+    Gry.arkanoid,
   ];
   Set<String> _wylaczone = {};
 
@@ -75,8 +82,7 @@ class Wpis {
   final String data;
   const Wpis({required this.imie, required this.wynik, required this.data});
 
-  Map<String, dynamic> doMapy() =>
-      {'imie': imie, 'wynik': wynik, 'data': data};
+  Map<String, dynamic> doMapy() => {'imie': imie, 'wynik': wynik, 'data': data};
 
   static Wpis zMapy(Map<String, dynamic> m) {
     final w = m['wynik'];
@@ -186,7 +192,8 @@ class Rekordy {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$wynik ${gra.jednostka} — najlepszy wynik w grze ${gra.nazwa}.',
+            Text(
+                '$wynik ${gra.jednostka} — najlepszy wynik w grze ${gra.nazwa}.',
                 style: const TextStyle(color: AppColors.tekstSzary)),
             const SizedBox(height: 14),
             TextField(
@@ -272,8 +279,8 @@ class Rekordy {
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Zamknij',
-                style: TextStyle(color: AppColors.tekst)),
+            child:
+                const Text('Zamknij', style: TextStyle(color: AppColors.tekst)),
           ),
         ],
       ),
@@ -289,8 +296,8 @@ class Rekordy {
           SizedBox(
             width: 22,
             child: Text('$miejsce.',
-                style: const TextStyle(
-                    color: AppColors.tekstSzary, fontSize: 14)),
+                style:
+                    const TextStyle(color: AppColors.tekstSzary, fontSize: 14)),
           ),
           Expanded(
             child: Text(w.imie,
@@ -303,16 +310,14 @@ class Rekordy {
           ),
           Text('${w.wynik} ${gra.jednostka}',
               style: TextStyle(
-                  color: kolor,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600)),
+                  color: kolor, fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
           SizedBox(
             width: 72,
             child: Text(w.data,
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                    color: AppColors.tekstSzary, fontSize: 12)),
+                style:
+                    const TextStyle(color: AppColors.tekstSzary, fontSize: 12)),
           ),
         ],
       ),
@@ -346,7 +351,8 @@ class Rekordy {
 // Guzik do paska gry - pokazuje tabele rekordow.
 class RekordyPrzycisk extends StatelessWidget {
   final Gra gra;
-  const RekordyPrzycisk({super.key, required this.gra});
+  final VoidCallback? beforeOpen;
+  const RekordyPrzycisk({super.key, required this.gra, this.beforeOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +362,10 @@ class RekordyPrzycisk extends StatelessWidget {
           ? IconButton(
               icon: const Icon(Icons.emoji_events_outlined),
               tooltip: 'Najlepsze wyniki',
-              onPressed: () => Rekordy.pokaz(context, gra),
+              onPressed: () {
+                beforeOpen?.call();
+                Rekordy.pokaz(context, gra);
+              },
             )
           : const SizedBox.shrink(),
     );

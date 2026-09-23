@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../app_theme.dart';
 
 class ConnectFourScreen extends StatefulWidget {
@@ -15,6 +16,9 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
   // board[r][c]: 0 = puste, 1 = gracz1, 2 = gracz2. Rzad 0 = gora.
   late List<List<int>> _board;
   int _current = 1;
+  int _round = 0;
+  bool _dropping = false;
+  Timer? _fallTimer;
   int? _winner; // 1, 2 albo 0 (remis)
   List<List<int>>? _winCells;
 
@@ -26,7 +30,16 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
 
   Color _color(int p) => p == 1 ? AppColors.gracz1 : AppColors.gracz2;
 
+  @override
+  void dispose() {
+    _fallTimer?.cancel();
+    super.dispose();
+  }
+
   void _reset() {
+    _fallTimer?.cancel();
+    _dropping = false;
+    _round++;
     setState(() {
       _board = List.generate(rows, (_) => List.filled(cols, 0));
       _current = 1;
@@ -36,11 +49,15 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
   }
 
   void _drop(int col) {
-    if (_winner != null) return;
+    if (_winner != null || _dropping) return;
     // Znajdz najnizszy wolny wiersz w kolumnie
     for (int r = rows - 1; r >= 0; r--) {
       if (_board[r][col] == 0) {
         setState(() {
+          _dropping = true;
+          _fallTimer = Timer(Duration(milliseconds: 320 + r * 45), () {
+            if (mounted) setState(() => _dropping = false);
+          });
           _board[r][col] = _current;
           final win = _winningCells(r, col, _current);
           if (win != null) {
@@ -150,10 +167,7 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppColors.tloJasniejsze,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: AppTheme.panel(AppColors.koral),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -181,10 +195,7 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
   Widget _grid() {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppColors.tloJasniejsze,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: AppTheme.panel(AppColors.koral),
       child: Column(
         children: List.generate(rows, (r) {
           return Expanded(
@@ -194,21 +205,58 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
                 final win = _isWinCell(r, c);
                 return Expanded(
                   child: GestureDetector(
+                    key: ValueKey('connect-$r-$c'),
                     onTap: () => _drop(c),
                     child: Padding(
                       padding: const EdgeInsets.all(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: v == 0
-                              ? AppColors.tlo
-                              : _color(v),
-                          shape: BoxShape.circle,
-                          border: win
-                              ? Border.all(
-                                  color: AppColors.tekst, width: 3)
-                              : null,
-                        ),
-                      ),
+                      child: LayoutBuilder(
+                          builder: (context, constraints) => Stack(
+                                fit: StackFit.expand,
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                      decoration: BoxDecoration(
+                                          color: AppColors.tlo,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: AppColors.tekstSzary
+                                                  .withOpacity(0.1)))),
+                                  if (v != 0)
+                                    TweenAnimationBuilder<double>(
+                                      key: ValueKey('$_round-$r-$c-$v'),
+                                      tween: Tween(begin: -(r + 1.0), end: 0.0),
+                                      duration:
+                                          Duration(milliseconds: 320 + r * 45),
+                                      curve: Curves.bounceOut,
+                                      builder: (context, value, child) =>
+                                          Transform.translate(
+                                              offset: Offset(
+                                                  0,
+                                                  value *
+                                                      (constraints.maxHeight +
+                                                          8)),
+                                              child: child),
+                                      child: Container(
+                                          decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              _color(v),
+                                              Color.alphaBlend(
+                                                  Colors.black.withOpacity(0.2),
+                                                  _color(v))
+                                            ]),
+                                        border: Border.all(
+                                            color: win
+                                                ? AppColors.tekst
+                                                : _color(v),
+                                            width: win ? 3 : 1),
+                                      )),
+                                    ),
+                                ],
+                              )),
                     ),
                   ),
                 );

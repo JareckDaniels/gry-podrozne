@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../app_theme.dart';
+import '../game_clock.dart';
 import '../rekordy.dart';
 
 class ReactionDuelScreen extends StatefulWidget {
@@ -14,13 +15,17 @@ class ReactionDuelScreen extends StatefulWidget {
 enum _Phase { gotowi, czekaj, teraz, koniec }
 
 class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
+  final _clock = GameClock();
+
   _Phase _phase = _Phase.gotowi;
   Timer? _timer;
   int? _winner; // 1 (gora) lub 2 (dol)
   String _message = '';
-  DateTime? _sygnal; // kiedy zapalil sie sygnal "TERAZ"
+  Duration? _sygnal; // kiedy zapalil sie sygnal "TERAZ"
 
   void _start() {
+    _clock.cancelAll();
+    _clock.resume();
     setState(() {
       _phase = _Phase.czekaj;
       _winner = null;
@@ -29,16 +34,17 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
     });
     // Losowe opoznienie 2-5 s, potem sygnal
     final ms = 2000 + Random().nextInt(3000);
-    _timer = Timer(Duration(milliseconds: ms), () {
+    _timer = _clock.once(Duration(milliseconds: ms), () {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.teraz;
-        _sygnal = DateTime.now();
+        _sygnal = _clock.elapsed;
       });
     });
   }
 
   void _tap(int player) {
+    if (_clock.paused) return;
     // Start tylko z ekranu poczatkowego. Po koncu - nowa runda wylacznie
     // przyciskiem restart, zeby nie przeklikac wyniku.
     if (_phase == _Phase.gotowi) {
@@ -60,9 +66,7 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
     }
     if (_phase == _Phase.teraz) {
       final start = _sygnal;
-      final ms = start == null
-          ? null
-          : DateTime.now().difference(start).inMilliseconds;
+      final ms = start == null ? null : (_clock.elapsed - start).inMilliseconds;
       setState(() {
         _phase = _Phase.koniec;
         _winner = player;
@@ -76,7 +80,7 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _clock.dispose();
     super.dispose();
   }
 
@@ -86,7 +90,8 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
       appBar: AppBar(
         title: const Text('Pojedynek refleksu'),
         actions: [
-          const RekordyPrzycisk(gra: Gry.refleks),
+          GamePauseButton(clock: _clock),
+          RekordyPrzycisk(gra: Gry.refleks, beforeOpen: _clock.pause),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa runda',
@@ -97,20 +102,23 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Gracz 1 (gora) - obrocony, by patrzyl ze swojej strony
-          Expanded(
-            child: RotatedBox(
-              quarterTurns: 2,
-              child: _half(1),
-            ),
-          ),
-          const Divider(height: 2, thickness: 2, color: AppColors.tlo),
-          // Gracz 2 (dol)
-          Expanded(child: _half(2)),
-        ],
-      ),
+      body: GamePauseLayer(
+          clock: _clock,
+          child: SafeArea(
+              child: Column(
+            children: [
+              // Gracz 1 (gora) - obrocony, by patrzyl ze swojej strony
+              Expanded(
+                child: RotatedBox(
+                  quarterTurns: 2,
+                  child: _half(1),
+                ),
+              ),
+              const Divider(height: 2, thickness: 2, color: AppColors.tlo),
+              // Gracz 2 (dol)
+              Expanded(child: _half(2)),
+            ],
+          ))),
     );
   }
 
@@ -134,18 +142,23 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
         text = 'TERAZ!';
         break;
       case _Phase.koniec:
-        bg = won
-            ? AppColors.zielen.withOpacity(0.9)
-            : AppColors.tloJasniejsze;
+        bg = won ? AppColors.zielen.withOpacity(0.9) : AppColors.tloJasniejsze;
         text = won ? 'Wygrana!\n$_message' : (lost ? _message : '');
         break;
     }
 
     return GestureDetector(
-      onTap: () => _tap(player),
+      onTapDown: (_) => _tap(player),
       child: Container(
         width: double.infinity,
-        color: bg,
+        decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+              bg,
+              Color.alphaBlend(Colors.black.withOpacity(0.18), bg)
+            ])),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -157,7 +170,10 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.tekst.withOpacity(0.7),
+                    color: (_phase == _Phase.teraz || won
+                            ? AppColors.tlo
+                            : AppColors.tekst)
+                        .withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -167,7 +183,9 @@ class _ReactionDuelScreenState extends State<ReactionDuelScreen> {
                   style: TextStyle(
                     fontSize: _phase == _Phase.teraz ? 44 : 22,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tekst,
+                    color: _phase == _Phase.teraz || won
+                        ? AppColors.tlo
+                        : AppColors.tekst,
                   ),
                 ),
               ],

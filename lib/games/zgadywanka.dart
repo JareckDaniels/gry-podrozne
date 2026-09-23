@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:math';
 import '../app_theme.dart';
 import 'slowa_baza.dart';
@@ -73,8 +74,15 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
   // Dzieki temu "łokieć" i "lokiec" sa traktowane tak samo.
   String _normalizuj(String s) {
     const mapa = {
-      'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
-      'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+      'ą': 'a',
+      'ć': 'c',
+      'ę': 'e',
+      'ł': 'l',
+      'ń': 'n',
+      'ó': 'o',
+      'ś': 's',
+      'ź': 'z',
+      'ż': 'z',
     };
     final buf = StringBuffer();
     for (final ch in s.toLowerCase().split('')) {
@@ -90,6 +98,7 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
   }
 
   void _sprawdz() {
+    if (_zgadniete || _poddane) return;
     final litery = _biezace.slowo.split('');
     final zbudowane = StringBuffer();
     for (int i = 0; i < litery.length; i++) {
@@ -97,6 +106,7 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
     }
     if (_normalizuj(zbudowane.toString()) == _normalizuj(_biezace.slowo)) {
       setState(() {
+        FocusScope.of(context).unfocus();
         _zgadniete = true;
         _seria++;
       });
@@ -112,9 +122,14 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
   }
 
   void _poddajSie() {
-    setState(() => _poddane = true);
-    Rekordy.zglos(context, Gry.zgadywanka, _seria);
-    _seria = 0;
+    if (_zgadniete || _poddane) return;
+    final wynik = _seria;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _poddane = true;
+      _seria = 0;
+    });
+    Rekordy.zglos(context, Gry.zgadywanka, wynik);
   }
 
   // Czysci wszystkie wpisane litery i ustawia kursor na pierwszym pustym polu
@@ -170,17 +185,14 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
+          child: ListView(
             children: [
               const SizedBox(height: 8),
               // Podpowiedz
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.tloJasniejsze,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: AppTheme.panel(AppColors.bursztyn),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -200,22 +212,16 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
                     Text(
                       _biezace.podpowiedz,
                       style: const TextStyle(
-                          fontSize: 18,
-                          height: 1.35,
-                          color: AppColors.tekst),
+                          fontSize: 18, height: 1.35, color: AppColors.tekst),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
               // Pola liter
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: _polaLiter(),
-                  ),
-                ),
-              ),
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: _polaLiter()),
               // Przyciski
               _przyciski(),
             ],
@@ -237,8 +243,9 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
         final h = w * 1.28;
         final fontSize = (w * 0.55).clamp(14.0, 26.0);
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        return Wrap(
+          alignment: WrapAlignment.center,
+          runSpacing: 8,
           children: List.generate(n, (i) {
             final odsloniona = _odsloniete[i];
             final koniec = _zgadniete || _poddane;
@@ -269,15 +276,18 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
               kafelek = SizedBox(
                 width: w,
                 height: h,
-                child: KeyboardListener(
-                  focusNode: FocusNode(skipTraversal: true),
-                  onKeyEvent: (event) {
+                child: Focus(
+                  skipTraversal: true,
+                  canRequestFocus: false,
+                  onKeyEvent: (node, event) {
                     // Backspace w pustym polu -> skocz do poprzedniego i wyczysc
-                    if (event.runtimeType.toString() == 'KeyDownEvent' &&
-                        event.logicalKey.keyLabel == 'Backspace' &&
+                    if (event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.backspace &&
                         _pola[i].text.isEmpty) {
                       _poprzedniePole(i);
+                      return KeyEventResult.handled;
                     }
+                    return KeyEventResult.ignored;
                   },
                   child: TextField(
                     controller: _pola[i],
@@ -393,8 +403,7 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
       return Column(
         children: [
           Text('Prawidłowe słowo to: ${_biezace.slowo}',
-              style: const TextStyle(
-                  fontSize: 17, color: AppColors.tekst)),
+              style: const TextStyle(fontSize: 17, color: AppColors.tekst)),
           const SizedBox(height: 12),
           _duzyPrzycisk('Następne słowo', AppColors.bursztyn, _nastepne),
         ],
@@ -438,14 +447,13 @@ class _ZgadywankaScreenState extends State<ZgadywankaScreen> {
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: kolor,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.tlo,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(tekst,
-            style:
-                const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
       ),
     );
   }

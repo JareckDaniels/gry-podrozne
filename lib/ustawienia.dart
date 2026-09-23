@@ -20,7 +20,8 @@ class _UstawieniaScreenState extends State<UstawieniaScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(
+          const SnackBar(
+              content: Text(
             'Nie udało się zapisać ustawień. Spróbuj ponownie.',
           )),
         );
@@ -40,10 +41,12 @@ class _UstawieniaScreenState extends State<UstawieniaScreen> {
           builder: (context, _) => ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text('HIGH-SCORE', style: TextStyle(
-                fontSize: 24, fontWeight: FontWeight.bold,
-                color: AppColors.bursztyn,
-              )),
+              const Text('HIGH-SCORE',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.bursztyn,
+                  )),
               const SizedBox(height: 8),
               const Text(
                 'Włącz lub wyłącz rekordy we wszystkich grach albo wybierz '

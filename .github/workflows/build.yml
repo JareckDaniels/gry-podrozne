@@ -107,6 +107,14 @@ jobs:
       - name: Sprawdz ekran Arkanoida
         run: flutter test test/arkanoid_widget_test.dart
 
+      - name: Sprawdz Balon, Biegacza i zegary
+        run: |
+          dart test/arcade_engines_test.dart
+          dart test/game_timers_test.dart
+
+      - name: Sprawdz wszystkie ekrany gier
+        run: flutter test test/games_smoke_test.dart
+
       - name: Zbuduj APK
         run: flutter build apk --release
 

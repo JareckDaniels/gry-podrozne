@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../app_theme.dart';
+import '../game_clock.dart';
 import '../rekordy.dart';
 
 class TapBattleScreen extends StatefulWidget {
@@ -13,16 +14,21 @@ class TapBattleScreen extends StatefulWidget {
 enum _Phase { gotowi, odliczanie, gra, koniec }
 
 class _TapBattleScreenState extends State<TapBattleScreen> {
+  final _clock = GameClock();
+
   _Phase _phase = _Phase.gotowi;
   int _score1 = 0;
   int _score2 = 0;
   int _countdown = 3;
   int _timeLeft = 10;
   Timer? _timer;
+  Duration _roundStart = Duration.zero;
 
   static const _gameSeconds = 10;
 
   void _startCountdown() {
+    _clock.cancelAll();
+    _clock.resume();
     setState(() {
       _phase = _Phase.odliczanie;
       _score1 = 0;
@@ -30,7 +36,7 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
       _countdown = 3;
     });
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = _clock.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() => _countdown--);
       if (_countdown <= 0) {
@@ -41,14 +47,17 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
   }
 
   void _startGame() {
+    _roundStart = _clock.elapsed;
     setState(() {
       _phase = _Phase.gra;
       _timeLeft = _gameSeconds;
     });
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = _clock.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
-      setState(() => _timeLeft--);
+      setState(() => _timeLeft =
+          (_gameSeconds - (_clock.elapsed - _roundStart).inMilliseconds ~/ 1000)
+              .clamp(0, _gameSeconds));
       if (_timeLeft <= 0) {
         t.cancel();
         setState(() => _phase = _Phase.koniec);
@@ -59,7 +68,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
   }
 
   void _tap(int player) {
-    if (_phase != _Phase.gra) return;
+    if (_clock.paused || _phase != _Phase.gra) return;
+    if ((_clock.elapsed - _roundStart).inSeconds >= _gameSeconds) return;
     setState(() {
       if (player == 1) {
         _score1++;
@@ -71,7 +81,7 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _clock.dispose();
     super.dispose();
   }
 
@@ -81,7 +91,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
       appBar: AppBar(
         title: const Text('Bitwa klikania'),
         actions: [
-          const RekordyPrzycisk(gra: Gry.bitwa),
+          GamePauseButton(clock: _clock),
+          RekordyPrzycisk(gra: Gry.bitwa, beforeOpen: _clock.pause),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Nowa runda',
@@ -89,18 +100,21 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: RotatedBox(
-              quarterTurns: 2,
-              child: _half(1, _score1),
-            ),
-          ),
-          _centerBar(),
-          Expanded(child: _half(2, _score2)),
-        ],
-      ),
+      body: GamePauseLayer(
+          clock: _clock,
+          child: SafeArea(
+              child: Column(
+            children: [
+              Expanded(
+                child: RotatedBox(
+                  quarterTurns: 2,
+                  child: _half(1, _score1),
+                ),
+              ),
+              _centerBar(),
+              Expanded(child: _half(2, _score2)),
+            ],
+          ))),
     );
   }
 
@@ -149,7 +163,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
             (player == 2 && _score2 > _score1));
 
     return GestureDetector(
-      onTap: () {
+      onTapDown: (_) {
+        if (_clock.paused) return;
         // Start tylko z ekranu poczatkowego. Po koncu gry nowa runda
         // wylacznie przyciskiem restart (prawy gorny rog) - zeby nie
         // przeklikac wyniku dobijajac ekran.
@@ -159,11 +174,19 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
           _tap(player);
         }
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
         width: double.infinity,
-        color: active
-            ? color.withOpacity(0.22)
-            : (isWinner ? color.withOpacity(0.35) : AppColors.tloJasniejsze),
+        decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withOpacity(active ? 0.25 : 0.08),
+                  AppColors.tloJasniejsze
+                ]),
+            border: Border.all(
+                color: color.withOpacity(isWinner ? 0.9 : 0.2), width: 2)),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -185,8 +208,8 @@ class _TapBattleScreenState extends State<TapBattleScreen> {
               ),
               if (active)
                 const Text('Klikaj!',
-                    style: TextStyle(
-                        fontSize: 18, color: AppColors.tekstSzary)),
+                    style:
+                        TextStyle(fontSize: 18, color: AppColors.tekstSzary)),
             ],
           ),
         ),
