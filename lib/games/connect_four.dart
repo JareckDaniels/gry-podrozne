@@ -165,19 +165,23 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
       color = _color(_winner!);
     }
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: AppTheme.panel(AppColors.koral),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
         children: [
           Text(text,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: AppColors.tekst)),
           if (_winner != 0) ...[
-            const SizedBox(width: 14),
             Container(
               width: 30,
               height: 30,

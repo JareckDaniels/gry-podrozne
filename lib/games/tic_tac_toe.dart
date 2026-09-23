@@ -106,19 +106,23 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
     }
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: AppTheme.panel(AppColors.bursztyn),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
         children: [
           Text(text,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: AppColors.tekst)),
           if (_winner != 'remis') ...[
-            const SizedBox(width: 12),
             Container(
               width: 44,
               height: 44,

@@ -22,11 +22,15 @@ void main() {
     await UstawieniaRekordow.instance.ustaw(false);
   });
   Future<void> open(WidgetTester t, Widget game,
-      {Size size = const Size(320, 568)}) async {
+      {Size size = const Size(320, 568), double textScale = 1}) async {
     await t.binding.setSurfaceSize(size);
     await t.pumpWidget(MaterialApp(
         theme: AppTheme.dark,
-        builder: (_, child) => GameBackdrop(child: child!),
+        builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: GameBackdrop(child: child!),
+            ),
         home: game));
     await t.pumpAndSettle();
   }
@@ -92,6 +96,34 @@ void main() {
     await t.tap(find.byTooltip('Nowa gra'));
     await t.pumpAndSettle();
     expect(find.text('Tura gracza'), findsOneWidget);
+    await close(t);
+  });
+
+  for (final game in [const TicTacToeScreen(), const ConnectFourScreen()]) {
+    for (final width in [280.0, 320.0]) {
+      for (final scale in [1.0, 1.5]) {
+        testWidgets('${game.runtimeType}: szerokość $width, tekst ×$scale',
+            (t) async {
+          await open(t, game, size: Size(width, 568), textScale: scale);
+          expect(find.text('Tura gracza'), findsOneWidget);
+          expect(t.takeException(), isNull);
+          await close(t);
+        });
+      }
+    }
+  }
+  testWidgets('Czwórki: zwycięstwo oraz nowa runda', (t) async {
+    await open(t, const ConnectFourScreen());
+    for (final col in [0, 1, 0, 1, 0, 1, 0]) {
+      await t.tap(find.byKey(ValueKey('connect-0-$col')));
+      await t.pumpAndSettle();
+    }
+    expect(find.text('Wygrywa gracz'), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await t.tap(find.byTooltip('Nowa gra'));
+    await t.pumpAndSettle();
+    expect(find.text('Tura gracza'), findsOneWidget);
+    expect(t.takeException(), isNull);
     await close(t);
   });
 }

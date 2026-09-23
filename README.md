@@ -103,3 +103,12 @@ Lokalnie przeszły testy silników Balonu, Biegacza, Arkanoida i Węża oraz tes
 pauzowanego zegara. Analiza nowych silników i zegara nie zgłosiła problemów.
 Testy widoków wszystkich gier dodano do GitHub Actions; nie zostały uruchomione
 lokalnie. Paczka zawiera źródła, bez skompilowanego APK.
+
+## Wersja 1.12.1 — panele planszówek na małym ekranie
+
+- Kółko i krzyżyk i Czwórki: panel tury i zwycięstwa może zawijać tekst
+  oraz przenosić symbol gracza do następnego wiersza. Usunięto sztywny
+  układ, który przekraczał szerokość przy czcionce testowej Fluttera.
+- Zachowano wcześniejsze testy. Dodano szerokości 280/320 px, tekst
+  w skali 1/1.5 oraz zwycięstwo i restart w Czwórkach.
+- Testów Fluttera nie uruchomiono lokalnie; są wykonywane w GitHub Actions.
