@@ -32,3 +32,13 @@ brak pytania o imię oraz przycisku pucharu. Inne gry powinny nadal obsługiwać
 rekordy. Uruchom ponownie aplikację i sprawdź zapamiętanie wyboru. Sprawdź też
 przyciski Włącz wszystkie / Wyłącz wszystkie oraz powrót dotychczasowych
 rekordów po ponownym włączeniu.
+
+## Wersja 1.10.0
+
+- Nowa gra Wąż (Snake): zielona plansza 20 × 24, pikselowe jedzenie,
+  wzrost po zjedzeniu i przegrana po uderzeniu w ścianę lub własne ciało.
+- Skręcanie gestami w czterech kierunkach, blokada zawracania,
+  stopniowe przyspieszanie co 5 punktów.
+- Pauza i ręczne wznowienie, także po powrocie z tła lub tabeli rekordów.
+- HIGH-SCORE z możliwością wyłączenia w ustawieniach.
+- Testy logiki: `dart test/snake_engine_test.dart` (także podczas budowania APK).

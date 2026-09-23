@@ -12,6 +12,7 @@ import 'games/simon.dart';
 import 'games/popit.dart';
 import 'games/biegacz.dart';
 import 'games/balon.dart';
+import 'games/snake.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,13 @@ class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
   static final List<GameEntry> games = [
+    GameEntry(
+      title: 'Wąż',
+      subtitle: '1 gracz · klasyczny Snake, zbieraj i rośnij',
+      icon: Icons.gesture,
+      accent: AppColors.zielen,
+      builder: () => const SnakeScreen(),
+    ),
     GameEntry(
       title: 'Kółko i krzyżyk',
       subtitle: '2 graczy · klasyka na 3 w rzędzie',

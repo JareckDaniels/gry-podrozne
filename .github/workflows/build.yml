@@ -98,6 +98,9 @@ jobs:
       - name: Pobierz pakiety
         run: flutter pub get
 
+      - name: Sprawdz logike Snake
+        run: dart test/snake_engine_test.dart
+
       - name: Zbuduj APK
         run: flutter build apk --release
 

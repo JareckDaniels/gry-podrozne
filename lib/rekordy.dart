@@ -14,6 +14,7 @@ class Gra {
 
 // Lista gier, ktore maja tabele rekordow.
 class Gry {
+  static const snake = Gra('snake', 'Wąż', 'pkt');
   static const biegacz = Gra('biegacz', 'Biegacz', 'm');
   static const balon = Gra('balon', 'Balon', 'pkt');
   static const simon = Gra('simon', 'Simon', 'poziom');
@@ -30,7 +31,7 @@ class UstawieniaRekordow extends ChangeNotifier {
   static const _klucz = 'high_score_wylaczone_gry';
   static const gry = [
     Gry.refleks, Gry.bitwa, Gry.zgadywanka, Gry.simon,
-    Gry.popit, Gry.biegacz, Gry.balon,
+    Gry.popit, Gry.biegacz, Gry.balon, Gry.snake,
   ];
   Set<String> _wylaczone = {};
 
