@@ -61,17 +61,28 @@ void main() {
     });
   }
   for (final game in [const BalonScreen(), const BiegaczScreen()]) {
-    testWidgets('${game.runtimeType}: poziomo, start i pauza', (t) async {
-      await open(t, game, size: const Size(740, 360));
-      await t.tap(find.text('Start'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 250));
-      await t.tap(find.byTooltip('Pauza'));
-      await t.pump();
-      expect(find.text('Chwila przerwy'), findsOneWidget);
-      expect(t.takeException(), isNull);
-      await close(t);
-    });
+    for (final textScale in [1.0, 1.5]) {
+      testWidgets(
+          '${game.runtimeType}: poziomo, start i pauza, tekst ×$textScale',
+          (t) async {
+        addTearDown(() => close(t));
+        await open(t, game, size: const Size(740, 360), textScale: textScale);
+        expect(t.takeException(), isNull);
+        expect(find.text('Start').hitTestable(), findsOneWidget);
+        await t.tap(find.text('Start'), warnIfMissed: true);
+        await t.pump();
+        expect(find.text('Start'), findsNothing);
+        await t.pump(const Duration(milliseconds: 250));
+        await t.tap(find.byTooltip('Pauza'));
+        await t.pump();
+        expect(find.text('Chwila przerwy'), findsOneWidget);
+        expect(find.text('Wznów').hitTestable(), findsOneWidget);
+        await t.tap(find.text('Wznów'));
+        await t.pump();
+        expect(find.text('Chwila przerwy'), findsNothing);
+        expect(t.takeException(), isNull);
+      });
+    }
   }
   testWidgets('Simon: wiele szybkich wejść i restart nie pozostawia timerów',
       (t) async {

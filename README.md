@@ -145,3 +145,11 @@ lokalnie. Paczka zawiera źródła, bez skompilowanego APK.
 - Testy logiki sprawdzają aktywne przejścia Balonu przez 150 sekund, podmuchy,
   różnorodność tras oraz skoki nad dziurami i upadek w Biegaczu.
   Testów ekranów Fluttera nie uruchomiono lokalnie; pozostają w CI.
+
+## Wersja 1.13.1 — dostępny przycisk startu w poziomie
+
+- Panel Balonu i Biegacza ogranicza wysokość do dostępnego miejsca.
+  Instrukcja przewija się niezależnie, a Start/Wznów pozostaje widoczny.
+- W poziomie panel jest szerszy. Test sprawdza trafialność przycisków,
+  start, pauzę i wznowienie przy skali tekstu 1 oraz 1.5.
+- Testów Fluttera nie uruchomiono lokalnie; weryfikacja widoków pozostaje w CI.

@@ -216,80 +216,94 @@ class _ArcadeScreenState extends State<ArcadeScreen>
                             letterSpacing: 1.1,
                             color: AppColors.tekstSzary)))),
           if (!started || paused || game.over)
-            Positioned.fill(
-                child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                      color: AppColors.tloJasniejsze.withOpacity(0.97),
-                      borderRadius: BorderRadius.circular(26),
-                      border: Border.all(color: accent.withOpacity(0.3)),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 30)
-                      ]),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(
-                        paused
-                            ? Icons.pause_circle_outline
-                            : game.over
-                                ? Icons.flag_rounded
-                                : widget.balloon
-                                    ? Icons.air_rounded
-                                    : Icons.directions_run_rounded,
-                        size: landscape ? 32 : 46,
-                        color: accent),
-                    const SizedBox(height: 10),
-                    Text(
-                        paused
-                            ? 'Chwila przerwy'
-                            : game.over
-                                ? 'Koniec gry'
-                                : record.nazwa,
-                        style: const TextStyle(
-                            fontSize: 25, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 10),
-                    Text(
-                        paused
-                            ? 'Wróć do gry, kiedy będziesz gotowy.'
-                            : game.over
-                                ? 'Twój wynik: ${game.score} ${record.jednostka}'
-                                : widget.balloon
-                                    ? 'Omijaj krótkie platformy i spadające skały.\nZbieraj złote kółka. Co 20 sekund nadchodzi podmuch!'
-                                    : 'Dotknij, aby skoczyć, przytrzymaj na wyższy skok.\nPod shurikenami przebiegnij. Po 1000 m przeskakuj też dziury w ziemi.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            height: 1.45, color: AppColors.tekstSzary)),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: reporting
-                              ? null
-                              : paused
-                                  ? resume
-                                  : start,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: AppColors.tlo),
-                          child: Text(paused
-                              ? 'Wznów'
-                              : game.over
-                                  ? 'Zagraj jeszcze raz'
-                                  : 'Start'),
-                        )),
-                  ]),
-                ),
-              ),
-            )),
+            Positioned.fill(child: _panel(landscape, constraints.maxHeight)),
         ]);
       })),
     );
   }
+
+  Widget _panel(bool landscape, double availableHeight) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+                maxWidth: landscape ? 560 : 360,
+                maxHeight: max(0.0, availableHeight - 24)),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                  color: AppColors.tloJasniejsze.withOpacity(0.97),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: accent.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.3), blurRadius: 30)
+                  ]),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                // Tylko treść przewija się przy małej wysokości lub dużej czcionce.
+                // Przycisk pozostaje poza obszarem przewijania.
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(
+                          paused
+                              ? Icons.pause_circle_outline
+                              : game.over
+                                  ? Icons.flag_rounded
+                                  : widget.balloon
+                                      ? Icons.air_rounded
+                                      : Icons.directions_run_rounded,
+                          size: landscape ? 32 : 46,
+                          color: accent),
+                      const SizedBox(height: 10),
+                      Text(
+                          paused
+                              ? 'Chwila przerwy'
+                              : game.over
+                                  ? 'Koniec gry'
+                                  : record.nazwa,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 25, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 10),
+                      Text(
+                          paused
+                              ? 'Wróć do gry, kiedy będziesz gotowy.'
+                              : game.over
+                                  ? 'Twój wynik: ${game.score} ${record.jednostka}'
+                                  : widget.balloon
+                                      ? 'Omijaj krótkie platformy i spadające skały.\nZbieraj złote kółka. Co 20 sekund nadchodzi podmuch!'
+                                      : 'Dotknij, aby skoczyć, przytrzymaj na wyższy skok.\nPod shurikenami przebiegnij. Po 1000 m przeskakuj też dziury w ziemi.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              height: 1.45, color: AppColors.tekstSzary)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: reporting
+                        ? null
+                        : paused
+                            ? resume
+                            : start,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: accent,
+                        foregroundColor: AppColors.tlo),
+                    child: Text(paused
+                        ? 'Wznów'
+                        : game.over
+                            ? 'Zagraj jeszcze raz'
+                            : 'Start'),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      );
 
   Widget _badge(IconData icon, String text, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
