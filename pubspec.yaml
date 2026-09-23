@@ -1,7 +1,7 @@
 name: gry_podrozne
 description: Zestaw prostych gier podroznych na jeden telefon (2-3 osoby).
 publish_to: 'none'
-version: 1.10.0+23
+version: 1.11.0+24
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -15,6 +15,8 @@ dependencies:
   shared_preferences: ^2.3.2
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^4.0.0
 
 flutter:

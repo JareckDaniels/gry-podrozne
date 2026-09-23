@@ -101,6 +101,12 @@ jobs:
       - name: Sprawdz logike Snake
         run: dart test/snake_engine_test.dart
 
+      - name: Sprawdz logike Arkanoida
+        run: dart test/arkanoid_engine_test.dart
+
+      - name: Sprawdz ekran Arkanoida
+        run: flutter test test/arkanoid_widget_test.dart
+
       - name: Zbuduj APK
         run: flutter build apk --release
 

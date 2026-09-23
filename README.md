@@ -42,3 +42,21 @@ rekordów po ponownym włączeniu.
 - Pauza i ręczne wznowienie, także po powrocie z tła lub tabeli rekordów.
 - HIGH-SCORE z możliwością wyłączenia w ustawieniach.
 - Testy logiki: `dart test/snake_engine_test.dart` (także podczas budowania APK).
+
+## Wersja 1.11.0 — Arkanoid
+
+- 30 różnych plansz; mur, piramida, diament, szachownica, brama, fala,
+  skrzydła, twierdza, tunele i mozaika w trzech wariantach.
+- Platforma sterowana palcem na planszy lub pasku pod nią. Kąt odbicia
+  zależy od miejsca trafienia. Dotknięcie planszy wypuszcza piłkę.
+- 3 życia na start; życie traci się dopiero po utracie wszystkich piłek.
+- Bonusy do złapania: ×2 i ×3 piłki (limit 24), ×2 szerokość platformy
+  na 20 sekund, dodatkowe życie.
+- Mocniejsze klocki, rosnąca prędkość, pauza i automatyczna pauza w tle.
+- Trwały zapis odblokowanych poziomów, wybór poziomu z menu gry.
+  Ponowienie lub wybranie poziomu zaczyna nową grę z 3 życiami i 0 punktów.
+  Stan trwającej rozgrywki nie jest zapisywany po zamknięciu aplikacji.
+- HIGH-SCORE zgodny z ustawieniami; zgłoszenie po utracie żyć lub ukończeniu
+  30. poziomu.
+- Testy: `dart test/arkanoid_engine_test.dart` oraz
+  `flutter test test/arkanoid_widget_test.dart`. Oba kroki uruchamia GitHub Actions.

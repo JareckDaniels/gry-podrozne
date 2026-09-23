@@ -13,6 +13,7 @@ import 'games/popit.dart';
 import 'games/biegacz.dart';
 import 'games/balon.dart';
 import 'games/snake.dart';
+import 'games/arkanoid.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +61,13 @@ class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
   static final List<GameEntry> games = [
+    GameEntry(
+      title: 'Arkanoid',
+      subtitle: '1 gracz · 30 poziomów, klocki i supermoce',
+      icon: Icons.view_module,
+      accent: AppColors.bursztyn,
+      builder: () => const ArkanoidScreen(),
+    ),
     GameEntry(
       title: 'Wąż',
       subtitle: '1 gracz · klasyczny Snake, zbieraj i rośnij',
