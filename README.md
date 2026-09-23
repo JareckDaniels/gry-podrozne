@@ -112,3 +112,24 @@ lokalnie. Paczka zawiera źródła, bez skompilowanego APK.
 - Zachowano wcześniejsze testy. Dodano szerokości 280/320 px, tekst
   w skali 1/1.5 oraz zwycięstwo i restart w Czwórkach.
 - Testów Fluttera nie uruchomiono lokalnie; są wykonywane w GitHub Actions.
+
+## Wersja 1.12.2 — wymagający Balon i shuriken w Biegaczu
+
+- Balon: kolejne szczeliny wymagają zmiany toru; generator nie powtarza
+  przejść przy krawędzi. Szczeliny stopniowo zwężają się, a tempo rośnie.
+- Odstępy między przeszkodami pozwalają ominąć belkę całym balonem
+  i wykonać następny manewr. Zachowano płynne sterowanie palcem.
+- Biegacz: latającą przeszkodą jest obracający się metaliczny shuriken
+  z kolistą strefą kolizji. Nadal można bezpiecznie przebiec pod nim.
+- Test balansu: 216 prób bez ruchu kończy się przegraną; 72 aktywne
+  symulacje po 150 sekund przechodzą trasę w różnych rozmiarach ekranu.
+  Test dodano także do CI. Testów widoków Fluttera nie uruchomiono lokalnie.
+
+## Wersja 1.12.3 — rzadsze bonusy Arkanoida
+
+- Szansa bonusu spada z 22% do 6% na zniszczony klocek, z przerwą
+  co najmniej 12 sekund aktywnej gry i limitem 3 bonusów na poziom.
+- Serce wypada najwyżej raz na całą rozgrywkę, również po zmianie poziomu.
+- Bonusy +1 i +2 dodają dokładnie jedną lub dwie piłki, zamiast mnożyć
+  wszystkie obecne piłki. Życie oznaczone samym sercem.
+- Testy silnika obejmują nowe bonusy, limity i ich reset przy nowej grze.

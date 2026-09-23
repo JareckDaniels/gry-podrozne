@@ -16,7 +16,60 @@ ArkanoidEngine gameWithBall(double x, double y, double vx, double vy) {
   return game;
 }
 
+// Wymusza udane losowanie, żeby sprawdzić twarde ograniczenia bonusów.
+class AlwaysDrop implements Random {
+  @override
+  double nextDouble() => 0;
+  @override
+  int nextInt(int max) => 0;
+  @override
+  bool nextBool() => false;
+}
+
 void main() {
+  final limited = ArkanoidEngine(random: AlwaysDrop());
+  void breakBrick() {
+    limited.bricks = [
+      ArkanoidBrick(10, 40, 30, 19, 1, 0),
+      ArkanoidBrick(300, 40, 30, 19, 1, 0)
+    ];
+    limited.balls
+      ..clear()
+      ..add(ArkanoidBall(25, 65, 0, -230));
+    limited.phase = ArkanoidPhase.playing;
+    limited.update(0.02);
+  }
+
+  void waitForBonus() {
+    limited.balls
+      ..clear()
+      ..add(ArkanoidBall(180, 300, 0, 0));
+    for (var i = 0; i < 241; i++) {
+      limited.update(0.05);
+    }
+  }
+
+  breakBrick();
+  check(limited.drops.single.kind == ArkanoidBonus.extraLife, 'Pierwsze serce');
+  limited.drops.clear();
+  breakBrick();
+  check(limited.drops.isEmpty, 'Przerwa blokuje kolejne bonusy');
+  for (var i = 0; i < 2; i++) {
+    waitForBonus();
+    breakBrick();
+    check(limited.drops.single.kind != ArkanoidBonus.extraLife,
+        'Serce nie wypada ponownie');
+    limited.drops.clear();
+  }
+  waitForBonus();
+  breakBrick();
+  check(limited.drops.isEmpty, 'Najwyżej trzy bonusy na poziom');
+  limited.phase = ArkanoidPhase.cleared;
+  limited.nextLevel();
+  breakBrick();
+  check(limited.drops.single.kind != ArkanoidBonus.extraLife,
+      'Nowy poziom odnawia limit bonusów, ale nie serca');
+
   final signatures = <String>{};
   for (var level = 1; level <= 30; level++) {
     final bricks = ArkanoidLevels.build(level);
@@ -95,12 +148,12 @@ void main() {
   check(game.phase == ArkanoidPhase.gameOver && game.lives == 0, 'Koniec żyć');
 
   game = gameWithBall(180, 400, 0, -230);
-  game.applyBonus(ArkanoidBonus.doubleBalls);
+  game.applyBonus(ArkanoidBonus.addOneBall);
   check(game.balls.length == 2, 'Dwie piłki');
-  game.applyBonus(ArkanoidBonus.tripleBalls);
-  check(game.balls.length == 6, 'Potrojenie wszystkich piłek');
-  for (var i = 0; i < 4; i++) {
-    game.applyBonus(ArkanoidBonus.tripleBalls);
+  game.applyBonus(ArkanoidBonus.addTwoBalls);
+  check(game.balls.length == 4, 'Dodanie dwóch piłek do dwóch istniejących');
+  for (var i = 0; i < 12; i++) {
+    game.applyBonus(ArkanoidBonus.addTwoBalls);
   }
   check(game.balls.length == 24, 'Limit multiball');
   check(
@@ -117,6 +170,15 @@ void main() {
   check(game.paddleWidth == 76, 'Bonus szerokości wygasa');
   game.applyBonus(ArkanoidBonus.extraLife);
   check(game.lives == 4, 'Dodatkowe życie');
+  game.applyBonus(ArkanoidBonus.extraLife);
+  check(game.lives == 4, 'Życie najwyżej raz na rozgrywkę');
+  game.phase = ArkanoidPhase.cleared;
+  game.nextLevel();
+  game.applyBonus(ArkanoidBonus.extraLife);
+  check(game.lives == 4, 'Następny poziom nie odnawia bonusu życia');
+  game.start();
+  game.applyBonus(ArkanoidBonus.extraLife);
+  check(game.lives == 4, 'Nowa rozgrywka odnawia bonus życia');
 
   game = gameWithBall(180, 400, 0, -230);
   game.drops.add(ArkanoidDrop(180, 497, ArkanoidBonus.extraLife));

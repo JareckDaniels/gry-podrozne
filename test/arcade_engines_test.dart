@@ -45,13 +45,13 @@ void main() {
   check(a.over, 'Kolizja z przeszkodą naziemną');
   a.reset();
   a.spawnIn = 100;
-  a.obstacles.add(RunnerObstacle(a.playerX, 42, 62, 24, flying: true));
+  a.obstacles.add(RunnerObstacle(a.playerX, 36, 62, 36, flying: true));
   a.update(1 / 60);
-  check(!a.over, 'Można przebiec pod dronem');
+  check(!a.over, 'Można przebiec pod shurikenem');
   a.y = 50;
   a.vy = 0;
   a.update(1 / 60);
-  check(a.over, 'Skok w drona kończy grę');
+  check(a.over, 'Skok w shurikena kończy grę');
   a.reset();
   a.spawnIn = 100;
   a.y = 1;
@@ -92,7 +92,7 @@ void main() {
     balloon.update(1 / 60);
     for (final g in balloon.gates) {
       check(
-          g.gapWidth >= 112 &&
+          g.gapWidth >= 96 &&
               g.gap - g.gapWidth / 2 >= 16 &&
               g.gap + g.gapWidth / 2 <= balloon.width - 16,
           'Bezpieczna szerokość szczeliny');

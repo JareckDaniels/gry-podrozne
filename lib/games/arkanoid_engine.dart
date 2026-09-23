@@ -2,7 +2,7 @@ import 'dart:math';
 
 enum ArkanoidPhase { ready, playing, cleared, gameOver, completed }
 
-enum ArkanoidBonus { doubleBalls, tripleBalls, widePaddle, extraLife }
+enum ArkanoidBonus { addOneBall, addTwoBalls, widePaddle, extraLife }
 
 class ArkanoidBrick {
   final double x, y, width, height;
@@ -109,6 +109,10 @@ class ArkanoidEngine {
   int level = 1, lives = 3, score = 0;
   double paddleX = width / 2;
   double wideSeconds = 0;
+  double _bonusCooldown = 0;
+  int _levelDrops = 0;
+  bool _lifeDropped = false;
+  bool _lifeAwarded = false;
   String notice = '';
   double noticeSeconds = 0;
 
@@ -123,10 +127,14 @@ class ArkanoidEngine {
     level = atLevel.clamp(1, ArkanoidLevels.count).toInt();
     lives = 3;
     score = 0;
+    _bonusCooldown = 0;
+    _lifeDropped = false;
+    _lifeAwarded = false;
     _loadLevel();
   }
 
   void _loadLevel() {
+    _levelDrops = 0;
     bricks = ArkanoidLevels.build(level);
     paddleX = width / 2;
     wideSeconds = 0;
@@ -176,6 +184,7 @@ class ArkanoidEngine {
   }
 
   void _step(double dt) {
+    _bonusCooldown = max(0, _bonusCooldown - dt);
     wideSeconds = max(0, wideSeconds - dt);
     noticeSeconds = max(0, noticeSeconds - dt);
     for (final ball in balls) {
@@ -215,12 +224,23 @@ class ArkanoidEngine {
         if (brick.hits == 0) {
           bricks.removeAt(i);
           score += 15;
-          if (random.nextDouble() < 0.22) {
+          // Maksymalnie 3 bonusy na planszę, z przerwą w aktywnej grze.
+          if (_levelDrops < 3 &&
+              _bonusCooldown <= 0 &&
+              random.nextDouble() < 0.06) {
+            final roll = random.nextDouble();
+            final kind = !_lifeDropped && roll < 0.10
+                ? ArkanoidBonus.extraLife
+                : roll < 0.50
+                    ? ArkanoidBonus.widePaddle
+                    : roll < 0.85
+                        ? ArkanoidBonus.addOneBall
+                        : ArkanoidBonus.addTwoBalls;
+            if (kind == ArkanoidBonus.extraLife) _lifeDropped = true;
+            _levelDrops++;
+            _bonusCooldown = 12;
             drops.add(ArkanoidDrop(
-                brick.x + brick.width / 2,
-                brick.y + brick.height / 2,
-                ArkanoidBonus
-                    .values[random.nextInt(ArkanoidBonus.values.length)]));
+                brick.x + brick.width / 2, brick.y + brick.height / 2, kind));
           }
         }
         break;
@@ -318,26 +338,30 @@ class ArkanoidEngine {
         notice = 'Platforma ×2 · 20 s';
         break;
       case ArkanoidBonus.extraLife:
+        if (_lifeAwarded) return;
+        _lifeAwarded = true;
+        _lifeDropped = true;
         lives++;
-        notice = '+1 życie';
+        notice = '♥ Dodatkowe życie';
         break;
-      case ArkanoidBonus.doubleBalls:
-      case ArkanoidBonus.tripleBalls:
-        final multiplier = kind == ArkanoidBonus.doubleBalls ? 2 : 3;
-        final originals = List<ArkanoidBall>.of(balls);
-        for (final ball in originals) {
-          for (var i = 1; i < multiplier && balls.length < maxBalls; i++) {
-            final angle = atan2(ball.vx, -ball.vy) + (i == 1 ? 0.32 : -0.32);
-            var vx = speed * sin(angle);
-            var vy = -speed * cos(angle);
-            if (vy.abs() < speed * 0.22) {
-              vy = (vy < 0 ? -1 : 1) * speed * 0.22;
-              vx = (vx < 0 ? -1 : 1) * sqrt(speed * speed - vy * vy);
-            }
-            balls.add(ArkanoidBall(ball.x, ball.y, vx, vy));
+      case ArkanoidBonus.addOneBall:
+      case ArkanoidBonus.addTwoBalls:
+        if (balls.isEmpty) return;
+        final count = kind == ArkanoidBonus.addOneBall ? 1 : 2;
+        final ball = balls.first;
+        var added = 0;
+        for (var i = 0; i < count && balls.length < maxBalls; i++) {
+          final angle = atan2(ball.vx, -ball.vy) + (i == 0 ? 0.32 : -0.32);
+          var vx = speed * sin(angle);
+          var vy = -speed * cos(angle);
+          if (vy.abs() < speed * 0.22) {
+            vy = (vy < 0 ? -1 : 1) * speed * 0.22;
+            vx = (vx < 0 ? -1 : 1) * sqrt(speed * speed - vy * vy);
           }
+          balls.add(ArkanoidBall(ball.x, ball.y, vx, vy));
+          added++;
         }
-        notice = 'Piłki ×$multiplier';
+        notice = added == 0 ? 'Limit piłek' : 'Piłki +$added';
         break;
     }
     noticeSeconds = 2.5;

@@ -192,9 +192,9 @@ class _ArkanoidScreenState extends State<ArkanoidScreen>
                 'Trafienie przy końcu platformy odbija piłkę pod większym kątem. '
                 'Małe kreski na klocku oznaczają liczbę pozostałych trafień.\n\n'
                 'Łap spadające bonusy:\n'
-                '×2 / ×3 — mnożą piłki (maks. 24).\n'
+                '+1 / +2 — dodają jedną lub dwie piłki (maks. 24).\n'
                 '↔ — platforma dwa razy szersza przez 20 sekund.\n'
-                '+1 — dodatkowe życie.\n\n'
+                '♥ — dodatkowe życie, najwyżej raz na rozgrywkę.\n\n'
                 'Życie tracisz, gdy spadną wszystkie piłki. Po stracie życia '
                 'zniszczone klocki nie wracają. Po przegranej ponowienie poziomu '
                 'daje 3 życia i zeruje wynik.\n\n'
@@ -531,7 +531,7 @@ class _ArkanoidPainter extends CustomPainter {
       canvas.drawCircle(Offset(ball.x, ball.y), ArkanoidEngine.radius, paint);
     }
     for (final drop in game.drops) {
-      final labels = ['×2', '×3', '↔', '+1'];
+      final labels = ['+1', '+2', '↔', '♥'];
       final dropColors = [
         AppColors.fiolet,
         const Color(0xFF5FAFE1),

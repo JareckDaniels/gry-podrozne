@@ -374,11 +374,53 @@ class _ArcadePainter extends CustomPainter {
       final rect =
           Rect.fromLTWH(o.x, ground - o.bottom - o.height, o.width, o.height);
       if (o.flying) {
-        rounded(c, rect, AppColors.koral, 10);
-        rounded(
-            c, Rect.fromLTWH(o.x + 4, rect.top + 6, 12, 6), AppColors.tekst, 3);
-        rounded(c, Rect.fromLTWH(o.x + o.width + 3, rect.top + 8, 16, 3),
-            AppColors.bursztyn, 2);
+        final radius = min(rect.width, rect.height) / 2;
+        c.save();
+        c.translate(rect.center.dx, rect.center.dy);
+        c.rotate(g.time * 8 + o.x * 0.012);
+        final star = Path();
+        for (var blade = 0; blade < 4; blade++) {
+          final angle = blade * pi / 2;
+          final tip = Offset(cos(angle), sin(angle)) * radius;
+          final heel =
+              Offset(cos(angle + 0.48), sin(angle + 0.48)) * (radius * 0.42);
+          final notch = Offset(cos(angle + pi / 4), sin(angle + pi / 4)) *
+              (radius * 0.28);
+          if (blade == 0) {
+            star.moveTo(tip.dx, tip.dy);
+          } else {
+            star.lineTo(tip.dx, tip.dy);
+          }
+          star
+            ..lineTo(heel.dx, heel.dy)
+            ..lineTo(notch.dx, notch.dy);
+        }
+        star.close();
+        p
+          ..style = PaintingStyle.fill
+          ..shader = const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFF0F5FF),
+                Color(0xFF8095B7),
+                Color(0xFFC1D5EE)
+              ]).createShader(
+              Rect.fromCircle(center: Offset.zero, radius: radius));
+        c.drawPath(star, p);
+        p
+          ..shader = null
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = const Color(0xFF4B607F);
+        c.drawPath(star, p);
+        p
+          ..style = PaintingStyle.fill
+          ..color = AppColors.koral;
+        c.drawCircle(Offset.zero, radius * 0.23, p);
+        p.color = AppColors.tlo;
+        c.drawCircle(Offset.zero, radius * 0.10, p);
+        c.restore();
       } else {
         rounded(c, rect, const Color(0xFF4EBCAB), 5);
         rounded(c, Rect.fromLTWH(o.x + 4, rect.top + 4, 4, o.height - 8),

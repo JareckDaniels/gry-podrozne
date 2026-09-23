@@ -111,14 +111,26 @@ class RunnerEngine extends ArcadeEngine {
           : max(width + 35, obstacles.last.x + speed * 1.35);
       obstacles.add(RunnerObstacle(
           spawnX,
-          flying ? 42 : 24 + random.nextDouble() * 14,
+          flying ? 36 : 24 + random.nextDouble() * 14,
           flying ? 62 : 0,
-          flying ? 24 : 34 + random.nextDouble() * 25,
+          flying ? 36 : 34 + random.nextDouble() * 25,
           flying: flying));
       // Co najmniej pełny skok i czas na ponowne dotknięcie ekranu.
       spawnIn = 1.35 + random.nextDouble() * 0.65;
     }
     for (final o in obstacles) {
+      if (o.flying) {
+        // Okrąg obejmuje obracające się ostrza; bez niewidzialnych narożników.
+        final cx = o.x + o.width / 2, cy = o.bottom + o.height / 2;
+        final dx = cx - cx.clamp(playerX - 12, playerX + 12);
+        final dy = cy - cy.clamp(y + 3, y + playerHeight - 3);
+        final r = min(o.width, o.height) / 2 - 1;
+        if (dx * dx + dy * dy < r * r) {
+          over = true;
+          break;
+        }
+        continue;
+      }
       if (playerX + 12 > o.x + 2 &&
           playerX - 12 < o.x + o.width - 2 &&
           y + playerHeight - 3 > o.bottom &&
@@ -147,10 +159,11 @@ class BalloonEngine extends ArcadeEngine {
   final List<BalloonCoin> coins = [];
   double x = 200, target = 200, vx = 0, travelled = 0;
   double spawnIn = 0.4, lastGap = 200;
+  double lastGapWidth = 140;
   int collected = 0;
   BalloonEngine({Random? random}) : random = random ?? Random();
   double get balloonY => height * 0.68;
-  double get speed => min(190.0, 95 + time * 1.1);
+  double get speed => min(190.0, 110 + time * 1.6);
   static const radius = 19.0;
   @override
   int get score => collected;
@@ -165,6 +178,7 @@ class BalloonEngine extends ArcadeEngine {
     spawnIn = 0.4;
     collected = 0;
     lastGap = x;
+    lastGapWidth = 140;
   }
 
   void drag(double delta) {
@@ -214,18 +228,33 @@ class BalloonEngine extends ArcadeEngine {
     coins.removeWhere((c) => c.y > height + 40);
     spawnIn -= dt;
     if (spawnIn <= 0) {
-      final gapWidth = max(112.0, 158 - time * 0.25);
+      final gapWidth = max(96.0, 140 - time * 0.6);
       final margin = gapWidth / 2 + 16;
-      // Każda fala ma gwarantowaną szczelinę. Kolejna nie skacze
-      // losowo na przeciwległy koniec szerokiego ekranu.
-      lastGap = (lastGap + (random.nextDouble() * 2 - 1) * 145)
-          .clamp(margin, width - margin)
-          .toDouble();
+      final low = margin, high = width - margin;
+      // Losujemy z dostępnych przedziałów, zamiast dociskać wynik do
+      // krawędzi (co wcześniej tworzyło całe serie tej samej szczeliny).
+      // Bezpieczne dla czaszy obszary kolejnych przejść nie nakładają się.
+      final requiredMove = (lastGapWidth + gapWidth) / 2 - 36 + 24;
+      final minMove = min(requiredMove, max(lastGap - low, high - lastGap));
+      const maxMove = 220.0;
+      final ranges = <Point<double>>[];
+      final leftLo = max(low, lastGap - maxMove);
+      final leftHi = min(high, lastGap - minMove);
+      final rightLo = max(low, lastGap + minMove);
+      final rightHi = min(high, lastGap + maxMove);
+      if (leftLo <= leftHi) ranges.add(Point(leftLo, leftHi));
+      if (rightLo <= rightHi) ranges.add(Point(rightLo, rightHi));
+      final range = ranges[random.nextInt(ranges.length)];
+      lastGap = range.x + random.nextDouble() * (range.y - range.x);
+      lastGapWidth = gapWidth;
       gates.add(BalloonGate(-22, lastGap, gapWidth));
       for (var i = 0; i < 3; i++) {
         coins.add(BalloonCoin(lastGap, -22 - i * 28));
       }
-      spawnIn = 1.75 + random.nextDouble() * 0.35;
+      // Odstęp fizyczny zostawia czas na ominięcie poprzedniej belki
+      // całym balonem, a potem na zmianę toru i ustabilizowanie ruchu.
+      spawnIn =
+          (max(230.0, 270 - time * 0.4) + random.nextDouble() * 25) / speed;
     }
     coins.removeWhere((c) {
       final dx = c.x - x, dy = c.y - balloonY;
